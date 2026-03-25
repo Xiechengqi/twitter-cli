@@ -116,8 +116,8 @@ export default function CommandsPage() {
   return (
     <>
       <Nav authenticated />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <main className="w-[80vw] mx-auto px-4 sm:px-6 py-16">
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Left: executor */}
           <Card hover={false}>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{tr.title}</h1>
