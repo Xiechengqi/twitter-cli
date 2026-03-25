@@ -151,9 +151,24 @@ async fn update_config(
     require_auth(&headers, &state).await?;
     let mut runtime = state.runtime.write().await;
     let updated = sanitize_config_update(&runtime.config, payload);
+
+    // If cdp_url changed, reconnect agent-browser
+    let cdp_changed = updated.agent_browser.cdp_url != runtime.config.agent_browser.cdp_url
+        && !updated.agent_browser.cdp_url.is_empty();
+
     let path = config::config_path()?;
     config::save(&path, &updated).await?;
     runtime.auth_state = crate::auth::AuthState::from_config(&updated);
+
+    if cdp_changed {
+        let binary = updated.agent_browser.binary.clone();
+        let cdp_url = updated.agent_browser.cdp_url.clone();
+        // Spawn reconnect in background so we don't block the response
+        tokio::spawn(async move {
+            config::reconnect_agent_browser(&binary, &cdp_url).await;
+        });
+    }
+
     runtime.config = updated;
 
     Ok(Json(ApiResponse::success(json!({ "saved": true }), None)))
