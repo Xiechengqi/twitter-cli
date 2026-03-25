@@ -162,7 +162,7 @@ export default function McpPage() {
                 <pre className="mt-4 text-xs whitespace-pre-wrap"><span className="text-slate-400">$ </span>{curlCmd}</pre>
               )}
 
-              {result && <pre className="mt-2 max-h-96 overflow-auto">{result}</pre>}
+              {result && <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words">{result}</pre>}
 
               <VncEmbed />
             </div>
