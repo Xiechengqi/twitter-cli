@@ -50,6 +50,7 @@ impl CommandExecutor {
             "delete" => actions::execute_delete(&client, &params).await,
             "post" => actions::execute_post(&client, &params).await,
             "reply" => actions::execute_reply(&client, &params).await,
+            "retweet" => actions::execute_retweet(&client, &params).await,
             "thread" => actions::execute_thread(&client, &params).await,
             "unbookmark" => actions::execute_unbookmark(&client, &params).await,
             "unfollow" => actions::execute_unfollow(&client, &params).await,

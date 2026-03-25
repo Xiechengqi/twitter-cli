@@ -586,7 +586,9 @@ mod tests {
 
     use tokio::sync::RwLock;
 
-    use super::{build_mcp_input_schema, mcp_error_response, sanitize_config_update, summarize_success};
+    use super::{
+        build_mcp_input_schema, mcp_error_response, sanitize_config_update, summarize_success,
+    };
     use crate::auth::AuthState;
     use crate::commands::executor::CommandExecutor;
     use crate::commands::registry::CommandRegistry;
@@ -641,10 +643,7 @@ mod tests {
             summarize_success(&serde_json::json!({"message":"done"})),
             "done"
         );
-        assert_eq!(
-            summarize_success(&serde_json::json!({"status":"ok"})),
-            "ok"
-        );
+        assert_eq!(summarize_success(&serde_json::json!({"status":"ok"})), "ok");
     }
 
     #[test]

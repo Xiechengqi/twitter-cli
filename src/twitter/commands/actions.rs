@@ -168,6 +168,62 @@ pub async fn execute_unbookmark(client: &AgentBrowserClient, params: &Value) -> 
     .await
 }
 
+pub async fn execute_retweet(client: &AgentBrowserClient, params: &Value) -> AppResult<Value> {
+    let url = required_string(params, "url")?;
+    client.open(&url).await?;
+    client.wait_ms(5_000).await?;
+
+    run_ui_action(
+        client,
+        r#"(async () => {
+          try {
+            const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            let attempts = 0;
+            let retweetBtn = null;
+            while (attempts < 20) {
+              const unretweetBtn = document.querySelector('[data-testid="unretweet"]');
+              if (unretweetBtn) {
+                return JSON.stringify({ ok: true, message: 'Tweet is already retweeted.' });
+              }
+              retweetBtn = document.querySelector('[data-testid="retweet"]');
+              if (retweetBtn !== null) {
+                break;
+              }
+              await sleep(500);
+              attempts++;
+            }
+            if (retweetBtn === null) {
+              return JSON.stringify({ ok: false, message: 'Could not find the Retweet button on this tweet. Are you logged in?' });
+            }
+
+            retweetBtn.click();
+            await sleep(1000);
+
+            let confirmBtn = document.querySelector('[data-testid="retweetConfirm"]');
+            if (confirmBtn === null) {
+              const candidates = Array.from(document.querySelectorAll('[role="menuitem"], button, div, span'));
+              confirmBtn = candidates.find(node => /repost|retweet/i.test((node.textContent || '').trim())) || null;
+            }
+            if (confirmBtn === null) {
+              return JSON.stringify({ ok: false, message: 'Could not find the Retweet confirmation option.' });
+            }
+
+            confirmBtn.click();
+            await sleep(1500);
+
+            const verifyBtn = document.querySelector('[data-testid="unretweet"]');
+            if (verifyBtn !== null) {
+              return JSON.stringify({ ok: true, message: 'Tweet successfully retweeted.' });
+            }
+            return JSON.stringify({ ok: false, message: 'Retweet action was initiated but UI did not update as expected.' });
+          } catch (error) {
+            return JSON.stringify({ ok: false, message: String(error) });
+          }
+        })()"#,
+    )
+    .await
+}
+
 pub async fn execute_follow(client: &AgentBrowserClient, params: &Value) -> AppResult<Value> {
     let username = normalize_username(&required_string(params, "username")?);
     if username.is_empty() {

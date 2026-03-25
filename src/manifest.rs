@@ -284,6 +284,20 @@ pub fn command_specs() -> Vec<CommandSpec> {
             }],
         },
         CommandSpec {
+            name: "retweet",
+            category: "write",
+            wave: 2,
+            execution_mode: "ui-first",
+            summary: "Retweet a tweet",
+            requires_auth: true,
+            params: vec![ParamSpec {
+                name: "url",
+                kind: "string",
+                required: true,
+                description: "Tweet URL",
+            }],
+        },
+        CommandSpec {
             name: "follow",
             category: "write",
             wave: 2,
@@ -463,6 +477,12 @@ pub fn tool_specs() -> Vec<ToolSpec> {
             requires_auth: true,
         },
         ToolSpec {
+            name: "twitter_retweet",
+            command: "retweet",
+            read_only: false,
+            requires_auth: true,
+        },
+        ToolSpec {
             name: "twitter_follow",
             command: "follow",
             read_only: false,
@@ -564,6 +584,7 @@ mod tests {
         let tools = tool_specs();
         assert!(tools.iter().any(|tool| tool.name == "twitter_thread"));
         assert!(tools.iter().any(|tool| tool.name == "twitter_delete"));
+        assert!(tools.iter().any(|tool| tool.name == "twitter_retweet"));
     }
 
     #[test]
