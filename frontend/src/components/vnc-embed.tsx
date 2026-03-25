@@ -23,6 +23,8 @@ export function VncEmbed() {
     })();
   }, []);
 
+  const configured = config ? !!(config.vnc.url && config.vnc.embed) : false;
+
   const handleRefresh = useCallback(() => {
     const iframe = iframeRef.current;
     if (iframe) {
@@ -30,7 +32,20 @@ export function VncEmbed() {
     }
   }, []);
 
-  const configured = config ? !!(config.vnc.url && config.vnc.embed) : false;
+  useEffect(() => {
+    if (!configured) return;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const handleLoad = () => {
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 100);
+    };
+
+    iframe.addEventListener('load', handleLoad);
+    return () => iframe.removeEventListener('load', handleLoad);
+  }, [configured]);
 
   if (!config) return null;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
@@ -9,7 +9,27 @@ import { VncEmbed } from '@/components/vnc-embed';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
-import type { ToolSpec } from '@/lib/types';
+import type { ToolSpec, CommandSpec } from '@/lib/types';
+
+const EXAMPLE_VALUES: Record<string, unknown> = {
+  username: 'OpenAI',
+  query: 'openai',
+  url: 'https://x.com/OpenAI/status/2033953592424731072',
+  text: 'hello from twitter-cli',
+  texts: ['hello from twitter-cli', 'follow-up post'],
+  type: 'for-you',
+  limit: 5,
+};
+
+function buildExampleArgs(commands: CommandSpec[], tool: ToolSpec): string {
+  const cmd = commands.find((c) => c.name === tool.command);
+  if (!cmd || cmd.params.length === 0) return '{}';
+  const map: Record<string, unknown> = {};
+  for (const p of cmd.params) {
+    map[p.name] = EXAMPLE_VALUES[p.name] ?? '';
+  }
+  return JSON.stringify(map, null, 2);
+}
 
 function buildCurlCommand(toolName: string, argsJson: string): string {
   const body = JSON.stringify({
@@ -25,8 +45,9 @@ export default function McpPage() {
   const { lang } = useLang();
   const tr = t(lang).mcp;
   const [tools, setTools] = useState<ToolSpec[]>([]);
+  const [commands, setCommands] = useState<CommandSpec[]>([]);
   const [toolName, setToolName] = useState('');
-  const [args, setArgs] = useState('{"username":"OpenAI"}');
+  const [args, setArgs] = useState('{}');
   const [result, setResult] = useState('');
   const [curlCmd, setCurlCmd] = useState('');
   const [running, setRunning] = useState(false);
@@ -35,13 +56,27 @@ export default function McpPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.getMcpTools();
-        setTools(res.data);
-        if (res.data.length > 0) setToolName(res.data[0].name);
+        const [toolRes, cmdRes] = await Promise.all([api.getMcpTools(), api.getCommands()]);
+        setTools(toolRes.data);
+        setCommands(cmdRes.data);
+        if (toolRes.data.length > 0) {
+          setToolName(toolRes.data[0].name);
+          setArgs(buildExampleArgs(cmdRes.data, toolRes.data[0]));
+        }
       } catch { /* 401 */ }
       finally { setLoading(false); }
     })();
   }, []);
+
+  const handleToolChange = useCallback((name: string) => {
+    setToolName(name);
+    setResult('');
+    setCurlCmd('');
+    const tool = tools.find((t) => t.name === name);
+    if (tool) {
+      setArgs(buildExampleArgs(commands, tool));
+    }
+  }, [tools, commands]);
 
   const handleCall = async () => {
     let parsed: Record<string, unknown>;
@@ -98,7 +133,7 @@ export default function McpPage() {
                 <div className="relative">
                   <select
                     value={toolName}
-                    onChange={(e) => { setToolName(e.target.value); setResult(''); setCurlCmd(''); }}
+                    onChange={(e) => handleToolChange(e.target.value)}
                     className="mt-1 appearance-none pr-10"
                   >
                     {tools.map((tool) => (
