@@ -19,6 +19,5 @@ pub struct AgentBrowserResponse {
 
 #[derive(Debug, Clone)]
 pub struct AgentBrowserEvalResult {
-    pub origin: Option<String>,
     pub result: Value,
 }

@@ -72,12 +72,8 @@ impl AgentBrowserClient {
         }
 
         let data = response.data.unwrap_or(Value::Null);
-        let origin = data
-            .get("origin")
-            .and_then(Value::as_str)
-            .map(ToString::to_string);
         let result = data.get("result").cloned().unwrap_or(Value::Null);
-        Ok(AgentBrowserEvalResult { origin, result })
+        Ok(AgentBrowserEvalResult { result })
     }
 
     pub async fn eval_json<T>(&self, script: &str) -> AppResult<T>
@@ -92,25 +88,6 @@ impl AgentBrowserClient {
             serde_json::from_value::<T>(evaluated.result)
                 .map_err(|err| AppError::BrowserExecutionFailed(err.to_string()))
         }
-    }
-
-    pub async fn get_url(&self) -> AppResult<String> {
-        let response = self.run(&["get", "url"]).await?;
-        if !response.success {
-            return Err(AppError::BrowserExecutionFailed(
-                response
-                    .error
-                    .unwrap_or_else(|| "agent-browser get url failed".to_string()),
-            ));
-        }
-
-        response
-            .data
-            .as_ref()
-            .and_then(|value| value.get("url"))
-            .and_then(Value::as_str)
-            .map(ToString::to_string)
-            .ok_or_else(|| AppError::BrowserExecutionFailed("missing URL response".to_string()))
     }
 
     pub async fn wait_ms(&self, milliseconds: u64) -> AppResult<()> {

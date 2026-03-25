@@ -520,6 +520,7 @@ async fn setup_password(
     }
 
     let mut runtime = state.runtime.write().await;
+    reject_setup_if_initialized(&runtime.auth_state)?;
     let mut updated = runtime.config.clone();
     updated.auth.password = payload.password;
     updated.auth.password_changed = true;
@@ -592,12 +593,12 @@ async fn update_config(
     Json(payload): Json<crate::config::AppConfig>,
 ) -> Result<Json<ApiResponse<Value>>, AppError> {
     require_auth(&headers, &state).await?;
-    let path = config::config_path()?;
-    config::save(&path, &payload).await?;
-
     let mut runtime = state.runtime.write().await;
-    runtime.auth_state = crate::auth::AuthState::from_config(&payload);
-    runtime.config = payload;
+    let updated = sanitize_config_update(&runtime.config, payload);
+    let path = config::config_path()?;
+    config::save(&path, &updated).await?;
+    runtime.auth_state = crate::auth::AuthState::from_config(&updated);
+    runtime.config = updated;
 
     Ok(Json(ApiResponse::success(json!({ "saved": true }), None)))
 }
@@ -992,6 +993,24 @@ fn mcp_error_response(
     })
 }
 
+fn reject_setup_if_initialized(auth_state: &crate::auth::AuthState) -> Result<(), AppError> {
+    if auth_state.password_initialized {
+        Err(AppError::InvalidParams(
+            "password is already configured".to_string(),
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn sanitize_config_update(
+    current: &crate::config::AppConfig,
+    mut proposed: crate::config::AppConfig,
+) -> crate::config::AppConfig {
+    proposed.auth = current.auth.clone();
+    proposed
+}
+
 async fn require_auth(headers: &HeaderMap, state: &AppState) -> Result<(), AppError> {
     let runtime = state.runtime.read().await;
     is_authenticated(headers, &runtime.auth_state)
@@ -1215,12 +1234,13 @@ mod tests {
     use tokio::sync::RwLock;
 
     use super::{
-        build_example_payload, build_mcp_input_schema, mcp_error_response, summarize_success,
+        build_example_payload, build_mcp_input_schema, mcp_error_response,
+        reject_setup_if_initialized, sanitize_config_update, summarize_success,
     };
     use crate::auth::AuthState;
     use crate::commands::executor::CommandExecutor;
     use crate::commands::registry::CommandRegistry;
-    use crate::config::AppConfig;
+    use crate::config::{AppConfig, AuthConfig, ServerConfig};
     use crate::manifest::{build_manifest, command_specs};
     use crate::server::{AppState, RuntimeState};
 
@@ -1229,11 +1249,7 @@ mod tests {
         AppState {
             config_path: "/tmp/config.toml".to_string(),
             first_run: false,
-            manifest: build_manifest(
-                "/tmp/config.toml".to_string(),
-                "0.0.0.0".to_string(),
-                12233,
-            ),
+            manifest: build_manifest("/tmp/config.toml".to_string(), "0.0.0.0".to_string(), 12233),
             runtime: Arc::new(RwLock::new(RuntimeState {
                 auth_state: AuthState::from_config(&config),
                 config,
@@ -1287,5 +1303,45 @@ mod tests {
             summarize_success(&serde_json::json!({ "message": "done" })),
             "done"
         );
+    }
+
+    #[test]
+    fn setup_password_is_rejected_after_initialization() {
+        let auth_state = AuthState {
+            password: "configured".to_string(),
+            password_initialized: true,
+        };
+        let error = reject_setup_if_initialized(&auth_state).expect_err("should reject setup");
+        assert_eq!(
+            error.to_string(),
+            "invalid parameters: password is already configured"
+        );
+    }
+
+    #[test]
+    fn config_update_preserves_existing_auth_values() {
+        let current = AppConfig {
+            auth: AuthConfig {
+                password: "secret".to_string(),
+                password_changed: true,
+            },
+            ..AppConfig::default()
+        };
+        let proposed = AppConfig {
+            auth: AuthConfig {
+                password: "overwritten".to_string(),
+                password_changed: false,
+            },
+            server: ServerConfig {
+                host: "0.0.0.0".to_string(),
+                port: 13000,
+            },
+            ..AppConfig::default()
+        };
+
+        let sanitized = sanitize_config_update(&current, proposed);
+        assert_eq!(sanitized.auth.password, "secret");
+        assert!(sanitized.auth.password_changed);
+        assert_eq!(sanitized.server.port, 13000);
     }
 }

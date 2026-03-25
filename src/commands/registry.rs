@@ -12,10 +12,6 @@ impl CommandRegistry {
         }
     }
 
-    pub fn list(&self) -> &[CommandSpec] {
-        &self.commands
-    }
-
     pub fn get(&self, name: &str) -> Option<&CommandSpec> {
         self.commands.iter().find(|command| command.name == name)
     }

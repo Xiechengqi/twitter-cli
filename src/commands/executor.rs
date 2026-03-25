@@ -17,10 +17,6 @@ impl CommandExecutor {
         Self { registry }
     }
 
-    pub fn registry(&self) -> &CommandRegistry {
-        &self.registry
-    }
-
     pub async fn execute(
         &self,
         command_name: &str,

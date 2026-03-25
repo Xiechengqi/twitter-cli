@@ -14,7 +14,6 @@ pub enum ErrorCode {
     BrowserNotFound,
     BrowserExecutionFailed,
     TwitterLoginRequired,
-    TwitterUiChanged,
     TwitterRequestFailed,
     ConfigReadFailed,
     ConfigWriteFailed,
@@ -31,7 +30,6 @@ impl Display for ErrorCode {
             Self::BrowserNotFound => "BROWSER_NOT_FOUND",
             Self::BrowserExecutionFailed => "BROWSER_EXECUTION_FAILED",
             Self::TwitterLoginRequired => "TWITTER_LOGIN_REQUIRED",
-            Self::TwitterUiChanged => "TWITTER_UI_CHANGED",
             Self::TwitterRequestFailed => "TWITTER_REQUEST_FAILED",
             Self::ConfigReadFailed => "CONFIG_READ_FAILED",
             Self::ConfigWriteFailed => "CONFIG_WRITE_FAILED",
@@ -57,8 +55,6 @@ pub enum AppError {
     BrowserExecutionFailed(String),
     #[error("twitter login required")]
     TwitterLoginRequired,
-    #[error("twitter UI changed: {0}")]
-    TwitterUiChanged(String),
     #[error("twitter request failed: {0}")]
     TwitterRequestFailed(String),
     #[error("failed to read config: {0}")]
@@ -79,7 +75,6 @@ impl AppError {
             Self::BrowserNotFound => ErrorCode::BrowserNotFound,
             Self::BrowserExecutionFailed(_) => ErrorCode::BrowserExecutionFailed,
             Self::TwitterLoginRequired => ErrorCode::TwitterLoginRequired,
-            Self::TwitterUiChanged(_) => ErrorCode::TwitterUiChanged,
             Self::TwitterRequestFailed(_) => ErrorCode::TwitterRequestFailed,
             Self::ConfigReadFailed(_) => ErrorCode::ConfigReadFailed,
             Self::ConfigWriteFailed(_) => ErrorCode::ConfigWriteFailed,
@@ -95,7 +90,6 @@ impl AppError {
             Self::BrowserNotFound => StatusCode::SERVICE_UNAVAILABLE,
             Self::BrowserExecutionFailed(_)
             | Self::TwitterRequestFailed(_)
-            | Self::TwitterUiChanged(_)
             | Self::TwitterLoginRequired
             | Self::ConfigReadFailed(_)
             | Self::ConfigWriteFailed(_)

@@ -116,12 +116,8 @@ pub async fn load_or_init() -> AppResult<(AppConfig, PathBuf, bool)> {
         let raw = fs::read_to_string(&path)
             .await
             .map_err(|err| AppError::ConfigReadFailed(err.to_string()))?;
-        let mut config = toml::from_str::<AppConfig>(&raw)
+        let config = toml::from_str::<AppConfig>(&raw)
             .map_err(|err| AppError::ConfigReadFailed(err.to_string()))?;
-        if config.server.host == "127.0.0.1" {
-            config.server.host = "0.0.0.0".to_string();
-            save(&path, &config).await?;
-        }
         return Ok((config, path, false));
     }
 
@@ -161,4 +157,75 @@ pub async fn save(path: &Path, config: &AppConfig) -> AppResult<()> {
         .map_err(|err| AppError::ConfigWriteFailed(err.to_string()))?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use super::{AppConfig, load_or_init};
+
+    #[tokio::test]
+    async fn load_existing_config_does_not_mutate_localhost_host() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let temp_home = std::env::temp_dir().join(format!("twitter-cli-config-test-{unique}"));
+        std::fs::create_dir_all(temp_home.join(".config/twitter-cli"))
+            .expect("create temp config dir");
+        std::fs::write(
+            temp_home.join(".config/twitter-cli/config.toml"),
+            r#"[server]
+host = "127.0.0.1"
+port = 12233
+
+[auth]
+password = ""
+password_changed = false
+
+[agent_browser]
+binary = "agent-browser"
+cdp_url = ""
+session_name = "twitter-cli"
+
+[vnc]
+url = ""
+username = ""
+password = ""
+embed = true
+"#,
+        )
+        .expect("write config");
+
+        let original_home = std::env::var_os("HOME");
+        unsafe {
+            std::env::set_var("HOME", &temp_home);
+        }
+
+        let result = load_or_init().await.expect("load existing config");
+
+        match original_home {
+            Some(value) => unsafe {
+                std::env::set_var("HOME", value);
+            },
+            None => unsafe {
+                std::env::remove_var("HOME");
+            },
+        }
+
+        assert_eq!(result.0.server.host, "127.0.0.1");
+        let saved = std::fs::read_to_string(temp_home.join(".config/twitter-cli/config.toml"))
+            .expect("read config");
+        assert!(saved.contains("host = \"127.0.0.1\""));
+
+        let _ = std::fs::remove_dir_all(temp_home);
+    }
+
+    #[test]
+    fn default_config_uses_public_bind_host() {
+        let config = AppConfig::default();
+        assert_eq!(config.server.host, "0.0.0.0");
+        assert_eq!(config.server.port, 12233);
+    }
 }

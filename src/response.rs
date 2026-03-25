@@ -46,20 +46,4 @@ where
             },
         }
     }
-
-    pub fn error(code: ErrorCode, message: impl Into<String>, command: Option<String>) -> Self {
-        Self {
-            ok: false,
-            data: None,
-            error: Some(ErrorBody {
-                code,
-                message: message.into(),
-            }),
-            meta: ResponseMeta {
-                site: "twitter",
-                command,
-                request_id: None,
-            },
-        }
-    }
 }

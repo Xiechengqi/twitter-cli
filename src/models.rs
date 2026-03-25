@@ -16,22 +16,9 @@ pub struct Account {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Post {
-    pub id: String,
-    pub text: String,
-    pub url: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrendItem {
     pub rank: u32,
     pub topic: String,
     pub tweets: String,
     pub category: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActionResult {
-    pub status: String,
-    pub message: String,
 }
