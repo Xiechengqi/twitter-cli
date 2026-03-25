@@ -37,14 +37,28 @@ export function VncEmbed() {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    const handleLoad = () => {
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-      }, 100);
+    const triggerResize = () => {
+      window.dispatchEvent(new Event('resize'));
+      iframe.contentWindow?.postMessage({ type: 'resize' }, '*');
     };
 
+    const handleLoad = () => {
+      setTimeout(triggerResize, 100);
+      setTimeout(triggerResize, 500);
+      setTimeout(triggerResize, 1000);
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      triggerResize();
+    });
+
     iframe.addEventListener('load', handleLoad);
-    return () => iframe.removeEventListener('load', handleLoad);
+    resizeObserver.observe(iframe.parentElement!);
+
+    return () => {
+      iframe.removeEventListener('load', handleLoad);
+      resizeObserver.disconnect();
+    };
   }, [configured]);
 
   if (!config) return null;
