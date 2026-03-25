@@ -37,8 +37,8 @@ export default function SetupPasswordPage() {
       <Nav authenticated={false} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-16 flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
         <Card className="max-w-md w-full" hover={false}>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{tr.title}</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{tr.description}</p>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">{tr.title}</h1>
+          <p className="text-sm text-slate-500 mb-6">{tr.description}</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="password">{tr.password}</label>
@@ -51,7 +51,7 @@ export default function SetupPasswordPage() {
                 className="mt-1"
               />
             </div>
-            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {tr.submit}
             </button>

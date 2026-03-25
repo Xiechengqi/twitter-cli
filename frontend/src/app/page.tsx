@@ -60,15 +60,15 @@ export default function HomePage() {
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight gradient-text mb-4">
             twitter-cli
           </h1>
-          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-            {tr.tagline}<code className="font-semibold text-brand-600 dark:text-brand-400">agent-browser</code>{tr.tagline_suffix}
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto">
+            {tr.tagline}<code className="font-semibold text-brand-600">agent-browser</code>{tr.tagline_suffix}
           </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Service Status */}
           <Card>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.service_status}</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.service_status}</h2>
             <dl className="space-y-3">
               <div><dt>{tr.dt_api}</dt><dd><code>{baseUrl}</code></dd></div>
               <div><dt>{tr.dt_docs}</dt><dd><code>{baseUrl}/docs</code></dd></div>
@@ -78,7 +78,7 @@ export default function HomePage() {
 
           {/* Agent Browser */}
           <Card>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.agent_browser}</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.agent_browser}</h2>
             <dl className="space-y-3">
               <div><dt>{tr.dt_binary}</dt><dd><code>{config?.agent_browser.binary}</code></dd></div>
               <div>
@@ -94,7 +94,7 @@ export default function HomePage() {
 
           {/* Quick Actions */}
           <Card>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.quick_actions}</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.quick_actions}</h2>
             <div className="space-y-3">
               {[
                 { href: '/commands', icon: Terminal, label: tr.action_commands },
@@ -104,12 +104,12 @@ export default function HomePage() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group flex items-center gap-3 p-3 -mx-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                  className="group flex items-center gap-3 p-3 -mx-3 rounded-lg hover:bg-slate-50 transition-colors"
                 >
-                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-50 text-brand-600">
                     <item.icon className="h-5 w-5" />
                   </div>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1">{item.label}</span>
+                  <span className="text-sm font-medium text-slate-700 flex-1">{item.label}</span>
                   <ArrowRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-1" />
                 </Link>
               ))}
@@ -118,7 +118,7 @@ export default function HomePage() {
 
           {/* Recent Executions */}
           <Card>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.recent_executions}</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.recent_executions}</h2>
             <ExecutionTable records={records} />
           </Card>
         </div>

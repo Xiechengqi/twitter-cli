@@ -100,7 +100,7 @@ export default function SettingsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-16 space-y-6">
         {/* Server */}
         <Card hover={false}>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.server}</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.server}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label>{tr.host}</label><input type="text" value={host} onChange={(e) => setHost(e.target.value)} /></div>
             <div><label>{tr.port}</label><input type="number" value={port} onChange={(e) => setPort(e.target.value)} /></div>
@@ -109,7 +109,7 @@ export default function SettingsPage() {
 
         {/* Agent Browser */}
         <Card hover={false}>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.agent_browser}</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.agent_browser}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label>{tr.binary}</label><input type="text" value={binary} onChange={(e) => setBinary(e.target.value)} /></div>
             <div><label>{tr.cdp_url}</label><input type="text" value={cdpUrl} onChange={(e) => setCdpUrl(e.target.value)} /></div>
@@ -120,7 +120,7 @@ export default function SettingsPage() {
 
         {/* VNC */}
         <Card hover={false}>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.vnc}</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.vnc}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label>{tr.url}</label><input type="text" value={vncUrl} onChange={(e) => setVncUrl(e.target.value)} /></div>
             <div><label>{tr.username}</label><input type="text" value={vncUser} onChange={(e) => setVncUser(e.target.value)} /></div>
@@ -144,7 +144,7 @@ export default function SettingsPage() {
 
         {/* Change Password */}
         <Card hover={false}>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.change_password}</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.change_password}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label>{tr.old_password}</label><input type="password" autoComplete="current-password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} /></div>
             <div><label>{tr.new_password}</label><input type="password" autoComplete="new-password" value={newPw} onChange={(e) => setNewPw(e.target.value)} /></div>

@@ -64,14 +64,14 @@ export function VncEmbed() {
   if (!config) return null;
 
   return (
-    <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-      <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+    <div className="mt-6 pt-6 border-t border-slate-200">
+      <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
         <StatusDot ok={configured} />
         VNC
         {configured && (
           <button
             onClick={handleRefresh}
-            className="p-1 rounded-md text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            className="p-1 rounded-md text-slate-400 hover:text-brand-600 hover:bg-slate-100 transition-colors"
             title="Refresh"
           >
             <RefreshCw className="h-3.5 w-3.5" />
@@ -79,15 +79,15 @@ export function VncEmbed() {
         )}
       </h3>
       {configured ? (
-        <div className="w-full rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden aspect-video">
+        <div className="w-full rounded-xl border border-slate-200 overflow-hidden aspect-video">
           <iframe
             ref={iframeRef}
             src={config.vnc.url}
-            className="w-full h-full border-0 bg-white dark:bg-slate-900"
+            className="w-full h-full border-0 bg-white"
           />
         </div>
       ) : (
-        <p className="text-sm text-slate-500 dark:text-slate-400">{tr.vnc_not_configured}</p>
+        <p className="text-sm text-slate-500">{tr.vnc_not_configured}</p>
       )}
     </div>
   );

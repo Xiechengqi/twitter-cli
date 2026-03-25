@@ -121,11 +121,11 @@ export default function McpPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Left: caller */}
           <Card hover={false}>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{tr.title}</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{tr.description}</p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">{tr.title}</h1>
+            <p className="text-sm text-slate-500 mb-4">{tr.description}</p>
             <pre className="mb-3 text-xs">Authorization: Bearer &lt;console-password&gt;</pre>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-1">{tr.endpoint}<code>/mcp</code></p>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{tr.tool_index}<code>/api/mcp/tools</code></p>
+            <p className="text-sm text-slate-600 mb-1">{tr.endpoint}<code>/mcp</code></p>
+            <p className="text-sm text-slate-600 mb-6">{tr.tool_index}<code>/api/mcp/tools</code></p>
 
             <div className="space-y-4">
               <div>
@@ -170,17 +170,17 @@ export default function McpPage() {
 
           {/* Right: tool list */}
           <Card hover={false}>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.tools_heading}</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.tools_heading}</h2>
             <ul className="space-y-2">
               {tools.map((tool) => (
                 <li key={tool.name} className="flex items-center gap-2 text-sm">
-                  <span className="font-semibold text-slate-900 dark:text-white">{tool.name}</span>
+                  <span className="font-semibold text-slate-900">{tool.name}</span>
                   <span className="text-slate-400">&rarr;</span>
                   <code>{tool.command}</code>
                   <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                     tool.read_only
-                      ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400'
+                      ? 'bg-emerald-50 text-emerald-600'
+                      : 'bg-amber-50 text-amber-600'
                   }`}>
                     {tool.read_only ? 'read' : 'write'}
                   </span>

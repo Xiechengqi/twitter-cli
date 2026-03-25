@@ -20,7 +20,7 @@ export function ExecutionTable({ records }: { records: ExecutionRecord[] }) {
   const tr = t(lang).components;
 
   if (records.length === 0) {
-    return <p className="text-sm text-slate-500 dark:text-slate-400">{tr.no_executions}</p>;
+    return <p className="text-sm text-slate-500">{tr.no_executions}</p>;
   }
 
   const recent = records.slice(-6).reverse();
@@ -29,7 +29,7 @@ export function ExecutionTable({ records }: { records: ExecutionRecord[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+          <tr className="text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200">
             <th className="pb-2 pr-4">{tr.when}</th>
             <th className="pb-2 pr-4">{tr.source}</th>
             <th className="pb-2 pr-4">{tr.command}</th>
@@ -41,24 +41,24 @@ export function ExecutionTable({ records }: { records: ExecutionRecord[] }) {
           {recent.map((r, i) => (
             <tr
               key={i}
-              className="border-b border-slate-100 dark:border-slate-800 last:border-0"
+              className="border-b border-slate-100 last:border-0"
             >
-              <td className="py-2 pr-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+              <td className="py-2 pr-4 text-slate-500 whitespace-nowrap">
                 {formatTimestamp(r.timestamp, lang)}
               </td>
-              <td className="py-2 pr-4 text-slate-600 dark:text-slate-300">{r.source}</td>
-              <td className="py-2 pr-4 font-medium text-slate-700 dark:text-slate-200">
+              <td className="py-2 pr-4 text-slate-600">{r.source}</td>
+              <td className="py-2 pr-4 font-medium text-slate-700">
                 {r.command}
               </td>
               <td className="py-2 pr-4">
                 <span className="flex items-center gap-1.5">
                   <StatusDot ok={r.ok} />
-                  <span className={r.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                  <span className={r.ok ? 'text-emerald-600' : 'text-red-600'}>
                     {r.ok ? tr.status_ok : tr.status_err}
                   </span>
                 </span>
               </td>
-              <td className="py-2 text-slate-600 dark:text-slate-300 truncate max-w-[200px]">
+              <td className="py-2 text-slate-600 truncate max-w-[200px]">
                 {r.summary}
               </td>
             </tr>

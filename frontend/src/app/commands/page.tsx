@@ -120,8 +120,8 @@ export default function CommandsPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Left: executor */}
           <Card hover={false}>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{tr.title}</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{tr.description}</p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">{tr.title}</h1>
+            <p className="text-sm text-slate-500 mb-6">{tr.description}</p>
 
             <div className="space-y-4">
               <div>
@@ -187,15 +187,15 @@ export default function CommandsPage() {
 
           {/* Right: command list */}
           <Card hover={false}>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.registered}</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.registered}</h2>
             <div className="space-y-2">
               {commands.map((c) => (
-                <details key={c.name} className="group border border-slate-100 dark:border-slate-700 rounded-lg">
-                  <summary className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-                    <span className="font-semibold text-sm text-slate-900 dark:text-white">{c.name}</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">{c.execution_mode}</span>
+                <details key={c.name} className="group border border-slate-100 rounded-lg">
+                  <summary className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50 rounded-lg transition-colors">
+                    <span className="font-semibold text-sm text-slate-900">{c.name}</span>
+                    <span className="text-xs text-slate-500">{c.execution_mode}</span>
                   </summary>
-                  <div className="px-3 pb-3 text-sm text-slate-600 dark:text-slate-300">
+                  <div className="px-3 pb-3 text-sm text-slate-600">
                     <p className="mb-2">{c.summary}</p>
                     <pre className="text-xs">{buildExample(c)}</pre>
                   </div>
