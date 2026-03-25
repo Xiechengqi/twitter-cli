@@ -1,21 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { StatusDot } from './status-dot';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
 import type { AppConfig } from '@/lib/types';
 
-const VNC_W = 1920;
-const VNC_H = 1080;
-
 export function VncEmbed() {
   const { lang } = useLang();
   const tr = t(lang).home;
   const [config, setConfig] = useState<AppConfig | null>(null);
-  const [scale, setScale] = useState(1);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -26,15 +23,12 @@ export function VncEmbed() {
     })();
   }, []);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      setScale(entry.contentRect.width / VNC_W);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [config]);
+  const handleRefresh = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (iframe) {
+      iframe.src = iframe.src;
+    }
+  }, []);
 
   const configured = config ? !!(config.vnc.url && config.vnc.embed) : false;
 
@@ -45,22 +39,22 @@ export function VncEmbed() {
       <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
         <StatusDot ok={configured} />
         VNC
+        {configured && (
+          <button
+            onClick={handleRefresh}
+            className="p-1 rounded-md text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+        )}
       </h3>
       {configured ? (
-        <div
-          ref={containerRef}
-          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
-          style={{ height: VNC_H * scale }}
-        >
+        <div className="w-full rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden aspect-video">
           <iframe
+            ref={iframeRef}
             src={config.vnc.url}
-            className="border-0 bg-white dark:bg-slate-900"
-            style={{
-              width: VNC_W,
-              height: VNC_H,
-              transform: `scale(${scale})`,
-              transformOrigin: 'top left',
-            }}
+            className="w-full h-full border-0 bg-white dark:bg-slate-900"
           />
         </div>
       ) : (
