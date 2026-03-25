@@ -1,21 +1,34 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
 import { Spinner } from '@/components/spinner';
+import { VncEmbed } from '@/components/vnc-embed';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
 import type { ToolSpec } from '@/lib/types';
 
+function buildCurlCommand(toolName: string, argsJson: string): string {
+  const body = JSON.stringify({
+    jsonrpc: '2.0',
+    id: 'console',
+    method: 'tools/call',
+    params: { name: toolName, arguments: JSON.parse(argsJson.trim() || '{}') },
+  });
+  return `curl -X POST http://localhost:12233/mcp \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer <password>' \\\n  -d '${body}'`;
+}
+
 export default function McpPage() {
   const { lang } = useLang();
   const tr = t(lang).mcp;
   const [tools, setTools] = useState<ToolSpec[]>([]);
-  const [toolName, setToolName] = useState('twitter_profile');
+  const [toolName, setToolName] = useState('');
   const [args, setArgs] = useState('{"username":"OpenAI"}');
   const [result, setResult] = useState('');
+  const [curlCmd, setCurlCmd] = useState('');
   const [running, setRunning] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -24,6 +37,7 @@ export default function McpPage() {
       try {
         const res = await api.getMcpTools();
         setTools(res.data);
+        if (res.data.length > 0) setToolName(res.data[0].name);
       } catch { /* 401 */ }
       finally { setLoading(false); }
     })();
@@ -37,6 +51,13 @@ export default function McpPage() {
       setResult(`Invalid JSON: ${e}`);
       return;
     }
+
+    try {
+      setCurlCmd(buildCurlCommand(toolName, args));
+    } catch {
+      setCurlCmd('');
+    }
+
     setRunning(true);
     setResult('');
     try {
@@ -62,7 +83,7 @@ export default function McpPage() {
     <>
       <Nav authenticated />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           {/* Left: caller */}
           <Card hover={false}>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{tr.title}</h1>
@@ -74,12 +95,20 @@ export default function McpPage() {
             <div className="space-y-4">
               <div>
                 <label>{tr.tool_label}</label>
-                <input
-                  type="text"
-                  value={toolName}
-                  onChange={(e) => setToolName(e.target.value)}
-                  className="mt-1"
-                />
+                <div className="relative">
+                  <select
+                    value={toolName}
+                    onChange={(e) => { setToolName(e.target.value); setResult(''); setCurlCmd(''); }}
+                    className="mt-1 appearance-none pr-10"
+                  >
+                    {tools.map((tool) => (
+                      <option key={tool.name} value={tool.name}>
+                        {tool.name} → {tool.command} ({tool.read_only ? 'read' : 'write'})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                </div>
               </div>
               <div>
                 <label>{tr.arguments_label}</label>
@@ -93,7 +122,14 @@ export default function McpPage() {
               <button onClick={handleCall} disabled={running} className="btn-primary">
                 {running ? <><Spinner /> {tr.call_tool}</> : tr.call_tool}
               </button>
-              {result && <pre className="mt-4 max-h-96 overflow-auto">{result}</pre>}
+
+              {curlCmd && (
+                <pre className="mt-4 text-xs whitespace-pre-wrap"><span className="text-slate-400">$ </span>{curlCmd}</pre>
+              )}
+
+              {result && <pre className="mt-2 max-h-96 overflow-auto">{result}</pre>}
+
+              <VncEmbed />
             </div>
           </Card>
 

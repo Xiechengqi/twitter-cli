@@ -11,21 +11,19 @@ import { Spinner } from '@/components/spinner';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
-import type { AppConfig, ExecutionRecord, BootstrapInfo } from '@/lib/types';
+import type { AppConfig, ExecutionRecord } from '@/lib/types';
 
 export default function HomePage() {
   const { lang } = useLang();
   const tr = t(lang).home;
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [records, setRecords] = useState<ExecutionRecord[]>([]);
-  const [bootstrap, setBootstrap] = useState<BootstrapInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
         const bs = await api.bootstrap();
-        setBootstrap(bs);
         if (bs.password_required) {
           window.location.href = '/setup/password';
           return;
@@ -53,7 +51,6 @@ export default function HomePage() {
   }
 
   const baseUrl = config ? `http://${config.server.host}:${config.server.port}` : '';
-  const vncConfigured = config ? !!(config.vnc.url && config.vnc.embed) : false;
 
   return (
     <>
@@ -123,27 +120,6 @@ export default function HomePage() {
           <Card>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.recent_executions}</h2>
             <ExecutionTable records={records} />
-          </Card>
-
-          {/* VNC */}
-          <Card className="md:col-span-2">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <StatusDot ok={vncConfigured} />
-              VNC
-            </h2>
-            {vncConfigured && config ? (
-              <>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-                  {tr.vnc_preview}{config.vnc.url}
-                </p>
-                <iframe
-                  src={config.vnc.url}
-                  className="w-full h-80 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900"
-                />
-              </>
-            ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400">{tr.vnc_not_configured}</p>
-            )}
           </Card>
         </div>
       </main>

@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
 import { Spinner } from '@/components/spinner';
+import { VncEmbed } from '@/components/vnc-embed';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
@@ -27,6 +28,19 @@ function buildExample(cmd: CommandSpec): string {
   return JSON.stringify(map, null, 2);
 }
 
+function buildCliCommand(name: string, params: Record<string, unknown>): string {
+  const parts = ['twitter-cli', name];
+  for (const [key, val] of Object.entries(params)) {
+    if (val === '' || val === undefined || val === null) continue;
+    if (Array.isArray(val)) {
+      parts.push(`--${key}`, JSON.stringify(val));
+    } else {
+      parts.push(`--${key}`, String(val));
+    }
+  }
+  return parts.join(' ');
+}
+
 export default function CommandsPage() {
   const { lang } = useLang();
   const tr = t(lang).commands;
@@ -35,6 +49,7 @@ export default function CommandsPage() {
   const [params, setParams] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState('');
+  const [cliCmd, setCliCmd] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,10 +69,9 @@ export default function CommandsPage() {
     setParams((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleExecute = async () => {
-    if (!cmd) return;
+  const parseParams = (): Record<string, unknown> | null => {
+    if (!cmd) return null;
     const parsed: Record<string, unknown> = {};
-    let hasError = false;
     for (const p of cmd.params) {
       const val = (params[p.name] || '').trim();
       if (!val) continue;
@@ -65,13 +79,19 @@ export default function CommandsPage() {
         parsed[p.name] = parseInt(val, 10);
       } else if (p.kind === 'array') {
         try { parsed[p.name] = JSON.parse(val); }
-        catch (e) { setResult(`Invalid JSON for ${p.name}: ${e}`); hasError = true; }
+        catch (e) { setResult(`Invalid JSON for ${p.name}: ${e}`); return null; }
       } else {
         parsed[p.name] = val;
       }
     }
-    if (hasError) return;
+    return parsed;
+  };
 
+  const handleExecute = async () => {
+    const parsed = parseParams();
+    if (!parsed) return;
+
+    setCliCmd(buildCliCommand(selected, parsed));
     setRunning(true);
     setResult('');
     try {
@@ -97,7 +117,7 @@ export default function CommandsPage() {
     <>
       <Nav authenticated />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           {/* Left: executor */}
           <Card hover={false}>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{tr.title}</h1>
@@ -109,7 +129,7 @@ export default function CommandsPage() {
                 <div className="relative">
                   <select
                     value={selected}
-                    onChange={(e) => { setSelected(e.target.value); setParams({}); setResult(''); }}
+                    onChange={(e) => { setSelected(e.target.value); setParams({}); setResult(''); setCliCmd(''); }}
                     className="mt-1 appearance-none pr-10"
                   >
                     {commands.map((c) => (
@@ -155,7 +175,13 @@ export default function CommandsPage() {
                 {running ? <><Spinner /> {tr.running}</> : tr.execute}
               </button>
 
-              {result && <pre className="mt-4 max-h-96 overflow-auto">{result}</pre>}
+              {cliCmd && (
+                <pre className="mt-4 text-xs"><span className="text-slate-400">$ </span>{cliCmd}</pre>
+              )}
+
+              {result && <pre className="mt-2 max-h-96 overflow-auto">{result}</pre>}
+
+              <VncEmbed />
             </div>
           </Card>
 
