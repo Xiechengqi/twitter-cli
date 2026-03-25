@@ -595,7 +595,6 @@ mod tests {
     fn test_state() -> AppState {
         let config = AppConfig::default();
         AppState {
-            config_path: "/tmp/config.toml".to_string(),
             first_run: false,
             manifest: build_manifest("/tmp/config.toml".to_string(), "0.0.0.0".to_string(), 12233),
             runtime: Arc::new(RwLock::new(RuntimeState {

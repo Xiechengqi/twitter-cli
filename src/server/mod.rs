@@ -53,7 +53,6 @@ impl ExecutionRecord {
 
 #[derive(Clone)]
 pub struct AppState {
-    pub config_path: String,
     pub first_run: bool,
     pub manifest: DescribeManifest,
     pub runtime: Arc<RwLock<RuntimeState>>,
@@ -80,7 +79,6 @@ pub async fn serve(host_override: Option<String>, port_override: Option<u16>) ->
             recent_executions: Vec::new(),
         })),
         executor: CommandExecutor::new(CommandRegistry::new()),
-        config_path: path.display().to_string(),
         first_run,
     });
 

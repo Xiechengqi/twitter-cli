@@ -80,10 +80,6 @@ impl AppConfig {
     pub fn is_password_initialized(&self) -> bool {
         !self.auth.password.is_empty() && self.auth.password_changed
     }
-
-    pub fn base_url(&self) -> String {
-        format!("http://{}:{}", self.server.host, self.server.port)
-    }
 }
 
 pub fn config_dir() -> AppResult<PathBuf> {
