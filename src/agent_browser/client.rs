@@ -26,11 +26,7 @@ impl AgentBrowserClient {
         command
             .arg("--session-name")
             .arg(&self.options.session_name);
-        if let Some(cdp_url) = &self.options.cdp_url {
-            if !cdp_url.is_empty() {
-                command.arg("--cdp-url").arg(cdp_url);
-            }
-        }
+        command.arg("--cdp-url").arg(&self.options.cdp_url);
         command.args(args);
 
         let deadline = Duration::from_secs(self.options.timeout_secs);

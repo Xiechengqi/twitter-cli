@@ -28,14 +28,16 @@ impl CommandExecutor {
             .get(command_name)
             .ok_or_else(|| AppError::CommandNotFound(command_name.to_string()))?;
 
+        if config.agent_browser.cdp_url.is_empty() {
+            return Err(AppError::InvalidParams(
+                "agent_browser.cdp_url is required".to_string(),
+            ));
+        }
+
         let client = AgentBrowserClient::new(AgentBrowserOptions {
             binary: config.agent_browser.binary.clone(),
             session_name: config.agent_browser.session_name.clone(),
-            cdp_url: if config.agent_browser.cdp_url.is_empty() {
-                None
-            } else {
-                Some(config.agent_browser.cdp_url.clone())
-            },
+            cdp_url: config.agent_browser.cdp_url.clone(),
             timeout_secs: config.agent_browser.timeout_secs,
         });
 
