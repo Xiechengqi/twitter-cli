@@ -37,7 +37,6 @@ impl CommandExecutor {
         let client = AgentBrowserClient::new(AgentBrowserOptions {
             binary: config.agent_browser.binary.clone(),
             session_name: config.agent_browser.session_name.clone(),
-            cdp_url: config.agent_browser.cdp_url.clone(),
             timeout_secs: config.agent_browser.timeout_secs,
         });
 

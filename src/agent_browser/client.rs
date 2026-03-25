@@ -26,7 +26,6 @@ impl AgentBrowserClient {
         command
             .arg("--session-name")
             .arg(&self.options.session_name);
-        command.arg("--cdp-url").arg(&self.options.cdp_url);
         command.args(args);
 
         let deadline = Duration::from_secs(self.options.timeout_secs);
@@ -41,11 +40,28 @@ impl AgentBrowserClient {
             .map_err(|err| AppError::BrowserExecutionFailed(err.to_string()))?;
 
         if !output.status.success() {
+            // In --json mode, agent-browser may report errors in stdout JSON
+            if let Ok(response) = serde_json::from_slice::<AgentBrowserResponse>(&output.stdout) {
+                if !response.success {
+                    let msg = response.error.unwrap_or_default();
+                    if !msg.is_empty() {
+                        return Err(AppError::BrowserExecutionFailed(msg));
+                    }
+                }
+            }
             let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-            return Err(if stderr.contains("No such file") {
+            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            let detail = if !stderr.is_empty() {
+                stderr
+            } else if !stdout.is_empty() {
+                stdout
+            } else {
+                format!("exit code {}", output.status.code().unwrap_or(-1))
+            };
+            return Err(if detail.contains("No such file") {
                 AppError::BrowserNotFound
             } else {
-                AppError::BrowserExecutionFailed(stderr)
+                AppError::BrowserExecutionFailed(detail)
             });
         }
 
