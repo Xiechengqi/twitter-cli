@@ -47,7 +47,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             server: ServerConfig {
-                host: "127.0.0.1".to_string(),
+                host: "0.0.0.0".to_string(),
                 port: 12233,
             },
             auth: AuthConfig {
@@ -116,8 +116,12 @@ pub async fn load_or_init() -> AppResult<(AppConfig, PathBuf, bool)> {
         let raw = fs::read_to_string(&path)
             .await
             .map_err(|err| AppError::ConfigReadFailed(err.to_string()))?;
-        let config = toml::from_str::<AppConfig>(&raw)
+        let mut config = toml::from_str::<AppConfig>(&raw)
             .map_err(|err| AppError::ConfigReadFailed(err.to_string()))?;
+        if config.server.host == "127.0.0.1" {
+            config.server.host = "0.0.0.0".to_string();
+            save(&path, &config).await?;
+        }
         return Ok((config, path, false));
     }
 

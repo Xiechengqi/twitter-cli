@@ -98,10 +98,16 @@ target/debug/twitter-cli execute profile --params '{"username":"OpenAI"}'
 target/debug/twitter-cli serve
 ```
 
+覆盖监听地址：
+
+```bash
+target/debug/twitter-cli serve --host 0.0.0.0 --port 12233
+```
+
 默认地址：
 
-- Console: `http://127.0.0.1:12233`
-- Docs: `http://127.0.0.1:12233/docs`
+- Console: `http://0.0.0.0:12233`
+- Docs: `http://0.0.0.0:12233/docs`
 
 ## 配置
 

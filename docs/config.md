@@ -19,7 +19,7 @@ ${HOME}/.config/twitter-cli/
 
 ```toml
 [server]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 12233
 
 [auth]
@@ -43,7 +43,7 @@ embed = true
 ### `[server]`
 
 - `host`
-  默认 `127.0.0.1`
+  默认 `0.0.0.0`
 - `port`
   默认 `12233`
 
@@ -103,6 +103,19 @@ embed = true
 
 - 所有 Console 访问重定向到 `/setup/password`
 - 用户必须先设置密码
+
+## Runtime Override
+
+`serve` 支持通过命令行参数临时覆盖监听地址：
+
+```bash
+twitter-cli serve --host 0.0.0.0 --port 12233
+```
+
+说明：
+
+- 这只影响当前进程监听地址
+- 不会改写 `config.toml`
 
 ## Persistence Rules
 

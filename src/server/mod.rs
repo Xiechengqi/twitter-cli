@@ -60,8 +60,15 @@ pub struct AppState {
     pub executor: CommandExecutor,
 }
 
-pub async fn serve() -> AppResult<()> {
-    let (config, path, first_run) = config::load_or_init().await?;
+pub async fn serve(host_override: Option<String>, port_override: Option<u16>) -> AppResult<()> {
+    let (mut config, path, first_run) = config::load_or_init().await?;
+    if let Some(host) = host_override {
+        config.server.host = host;
+    }
+    if let Some(port) = port_override {
+        config.server.port = port;
+    }
+
     let auth_state = AuthState::from_config(&config);
     let host = config.server.host.clone();
     let port = config.server.port;

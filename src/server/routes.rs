@@ -1231,7 +1231,7 @@ mod tests {
             first_run: false,
             manifest: build_manifest(
                 "/tmp/config.toml".to_string(),
-                "127.0.0.1".to_string(),
+                "0.0.0.0".to_string(),
                 12233,
             ),
             runtime: Arc::new(RwLock::new(RuntimeState {

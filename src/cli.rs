@@ -22,7 +22,7 @@ pub struct Cli {
 enum CliCommand {
     Describe(DescribeArgs),
     Execute(ExecuteArgs),
-    Serve,
+    Serve(ServeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -36,6 +36,14 @@ struct ExecuteArgs {
     command: String,
     #[arg(long, default_value = "{}")]
     params: String,
+}
+
+#[derive(Debug, Args)]
+struct ServeArgs {
+    #[arg(long)]
+    host: Option<String>,
+    #[arg(long)]
+    port: Option<u16>,
 }
 
 impl Cli {
@@ -76,7 +84,7 @@ impl Cli {
                 );
                 Ok(())
             }
-            CliCommand::Serve => server::serve().await,
+            CliCommand::Serve(args) => server::serve(args.host, args.port).await,
         }
     }
 }
