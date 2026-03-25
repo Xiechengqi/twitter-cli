@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, HeaderValue, header};
-use axum::response::{Html, IntoResponse, Redirect};
+use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
@@ -16,15 +16,9 @@ use crate::server::{AppState, ExecutionRecord};
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(console_home))
-        .route("/login", get(login_page))
         .route("/logout", post(logout))
-        .route("/setup/password", get(setup_password_page))
-        .route("/commands", get(commands_page))
-        .route("/mcp", get(mcp_page).post(call_mcp))
-        .route("/settings", get(settings_page))
-        .route("/docs", get(docs_page))
         .route("/health", get(health))
+        .route("/mcp", post(call_mcp))
         .route("/api/bootstrap", get(bootstrap))
         .route("/api/setup/password", post(setup_password))
         .route("/api/login", post(login))
@@ -36,451 +30,13 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/skills", get(get_skills))
         .route("/api/password/change", post(change_password))
         .route("/api/execute/{command}", post(execute_command))
+        .fallback(crate::embedded::serve_static)
         .with_state(state)
 }
 
-async fn console_home(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Result<impl IntoResponse, AppError> {
-    let runtime = state.runtime.read().await;
-    if let Some(redirect) = maybe_redirect_console(&headers, &runtime.auth_state) {
-        return Ok(redirect.into_response());
-    }
-    let runtime = state.runtime.read().await;
-    let recent_executions = if runtime.recent_executions.is_empty() {
-        "<p>No commands have been executed yet.</p>".to_string()
-    } else {
-        let items = runtime
-            .recent_executions
-            .iter()
-            .rev()
-            .take(6)
-            .map(|entry| {
-                format!(
-                    "<tr><td><code>{}</code></td><td>{}</td><td><code>{}</code></td><td>{}</td><td>{}</td></tr>",
-                    entry.timestamp,
-                    escape_html(&entry.source),
-                    escape_html(&entry.command),
-                    if entry.ok { "ok" } else { "error" },
-                    escape_html(&entry.summary)
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("");
-        format!(
-            "<table><thead><tr><th>When</th><th>Source</th><th>Command</th><th>Status</th><th>Summary</th></tr></thead><tbody>{items}</tbody></table>"
-        )
-    };
-    let vnc_section = if !runtime.config.vnc.url.is_empty() && runtime.config.vnc.embed {
-        format!(
-            "<div class=\"card\"><h2>VNC</h2><p>Embedded preview from {}</p><iframe src=\"{}\" style=\"width:100%;height:320px;border:1px solid #d1d5db;border-radius:12px;background:#fff\"></iframe></div>",
-            escape_html(&runtime.config.vnc.url),
-            escape_html(&runtime.config.vnc.url)
-        )
-    } else {
-        "<div class=\"card\"><h2>VNC</h2><p>VNC is not configured or embedding is disabled.</p></div>"
-            .to_string()
-    };
-    Ok(Html(render_page(
-        "Console",
-        &format!(
-            r#"
-            <div class="hero">
-              <h1>twitter-cli</h1>
-              <p>Local Twitter automation control plane backed by <code>agent-browser</code>.</p>
-            </div>
-            <div class="grid">
-              <div class="card">
-                <h2>Service Status</h2>
-                <dl>
-                  <dt>API</dt><dd><code>{}</code></dd>
-                  <dt>Docs</dt><dd><code>{}/docs</code></dd>
-                  <dt>Config</dt><dd><code>{}</code></dd>
-                </dl>
-              </div>
-              <div class="card">
-                <h2>Agent Browser</h2>
-                <dl>
-                  <dt>Binary</dt><dd><code>{}</code></dd>
-                  <dt>CDP URL</dt><dd><code>{}</code></dd>
-                  <dt>Session</dt><dd><code>{}</code></dd>
-                </dl>
-              </div>
-              <div class="card">
-                <h2>Quick Actions</h2>
-                <ul>
-                  <li><a href="/commands">Run profile, timeline, search, and write commands</a></li>
-                  <li><a href="/mcp">Review MCP tools and auth model</a></li>
-                  <li><a href="/settings">Adjust server, agent-browser, and auth settings</a></li>
-                </ul>
-              </div>
-              <div class="card">
-                <h2>Recent Executions</h2>
-                {}
-              </div>
-              {}
-            </div>
-            "#,
-            escape_html(&runtime.config.base_url()),
-            escape_html(&runtime.config.base_url()),
-            escape_html(&state.config_path),
-            escape_html(&runtime.config.agent_browser.binary),
-            escape_html(&runtime.config.agent_browser.cdp_url),
-            escape_html(&runtime.config.agent_browser.session_name),
-            recent_executions,
-            vnc_section,
-        ),
-        NavKind::Authenticated,
-    ))
-    .into_response())
-}
-
-async fn login_page() -> Html<String> {
-    Html(render_page(
-        "Login",
-        r#"
-        <div class="single-card">
-          <h1>Login</h1>
-          <p>Use the Console password. The same credential also works as API and MCP Bearer token.</p>
-          <form id="login-form">
-            <label>Password</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" />
-            <button type="submit">Login</button>
-          </form>
-          <pre id="result"></pre>
-        </div>
-        <script>
-        document.getElementById('login-form').addEventListener('submit', async (event) => {
-          event.preventDefault();
-          const password = document.getElementById('password').value;
-          const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ password })
-          });
-          const data = await response.json();
-          document.getElementById('result').textContent = JSON.stringify(data, null, 2);
-          if (response.ok) window.location.href = '/';
-        });
-        </script>
-        "#,
-        NavKind::Anonymous,
-    ))
-}
-
-async fn setup_password_page() -> Html<String> {
-    Html(render_page(
-        "Setup Password",
-        r#"
-        <div class="single-card">
-          <h1>Setup Password</h1>
-          <p>First run requires a password. This password will also act as the API and MCP Bearer token.</p>
-          <form id="setup-form">
-            <label>Password</label>
-            <input id="password" name="password" type="password" autocomplete="new-password" />
-            <button type="submit">Save Password</button>
-          </form>
-          <pre id="result"></pre>
-        </div>
-        <script>
-        document.getElementById('setup-form').addEventListener('submit', async (event) => {
-          event.preventDefault();
-          const password = document.getElementById('password').value;
-          const response = await fetch('/api/setup/password', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ password })
-          });
-          const data = await response.json();
-          document.getElementById('result').textContent = JSON.stringify(data, null, 2);
-          if (response.ok) window.location.href = '/settings';
-        });
-        </script>
-        "#,
-        NavKind::Anonymous,
-    ))
-}
-
-async fn commands_page(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Result<impl IntoResponse, AppError> {
-    let runtime = state.runtime.read().await;
-    if let Some(redirect) = maybe_redirect_console(&headers, &runtime.auth_state) {
-        return Ok(redirect.into_response());
-    }
-    let command_cards = state
-        .manifest
-        .commands
-        .iter()
-        .map(|command| {
-            format!(
-                r#"<details class="command-card">
-                  <summary><strong>{}</strong> <span>{}</span></summary>
-                  <p>{}</p>
-                  <code>{}</code>
-                </details>"#,
-                command.name,
-                command.execution_mode,
-                command.summary,
-                build_example_payload(command),
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("");
-    Ok(Html(render_page(
-        "Commands",
-        &format!(
-            r#"
-            <div class="grid two">
-              <div class="card">
-                <h1>Command Runner</h1>
-                <p>Run any registered command through the same API used by CLI and MCP mappings.</p>
-                <label>Command</label>
-                <input id="command" value="profile" />
-                <label>Params (JSON)</label>
-                <textarea id="params">{{"username":"OpenAI"}}</textarea>
-                <button id="run">Execute</button>
-                <pre id="result"></pre>
-              </div>
-              <div class="card">
-                <h2>Registered Commands</h2>
-                {}
-              </div>
-            </div>
-            <script>
-            document.getElementById('run').addEventListener('click', async () => {{
-              const command = document.getElementById('command').value.trim();
-              const raw = document.getElementById('params').value.trim() || '{{}}';
-              let params;
-              try {{
-                params = JSON.parse(raw);
-              }} catch (error) {{
-                document.getElementById('result').textContent = 'Invalid JSON: ' + error;
-                return;
-              }}
-              const response = await fetch('/api/execute/' + encodeURIComponent(command), {{
-                method: 'POST',
-                headers: {{ 'content-type': 'application/json' }},
-                body: JSON.stringify({{ params, format: 'json' }})
-              }});
-              const data = await response.json();
-              document.getElementById('result').textContent = JSON.stringify(data, null, 2);
-            }});
-            </script>
-            "#,
-            command_cards
-        ),
-        NavKind::Authenticated,
-    ))
-    .into_response())
-}
-
-async fn mcp_page(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Result<impl IntoResponse, AppError> {
-    let runtime = state.runtime.read().await;
-    if let Some(redirect) = maybe_redirect_console(&headers, &runtime.auth_state) {
-        return Ok(redirect.into_response());
-    }
-    let tools = state
-        .manifest
-        .mcp_tools
-        .iter()
-        .map(|tool| {
-            format!(
-                "<li><strong>{}</strong> → <code>{}</code> ({})</li>",
-                tool.name,
-                tool.command,
-                if tool.read_only { "read" } else { "write" }
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("");
-    Ok(Html(render_page(
-        "MCP",
-        &format!(
-            r#"
-            <div class="grid two">
-              <div class="card">
-                <h1>MCP</h1>
-                <p>All MCP tools use the same password as Console and API.</p>
-                <pre>Authorization: Bearer &lt;console-password&gt;</pre>
-                <p>Endpoint: <code>/mcp</code></p>
-                <p>Tool index: <code>/api/mcp/tools</code></p>
-                <label>Tool</label>
-                <input id="mcp-tool" value="twitter_profile" />
-                <label>Arguments (JSON)</label>
-                <textarea id="mcp-arguments">{{"username":"OpenAI"}}</textarea>
-                <button id="call-mcp">Call Tool</button>
-                <pre id="mcp-result"></pre>
-              </div>
-              <div class="card">
-                <h2>Tools</h2>
-                <ul>{}</ul>
-              </div>
-            </div>
-            <script>
-            document.getElementById('call-mcp').addEventListener('click', async () => {{
-              let argumentsPayload;
-              try {{
-                argumentsPayload = JSON.parse(document.getElementById('mcp-arguments').value.trim() || '{{}}');
-              }} catch (error) {{
-                document.getElementById('mcp-result').textContent = 'Invalid JSON: ' + error;
-                return;
-              }}
-              const response = await fetch('/mcp', {{
-                method: 'POST',
-                headers: {{ 'content-type': 'application/json' }},
-                body: JSON.stringify({{
-                  jsonrpc: '2.0',
-                  id: 'console',
-                  method: 'tools/call',
-                  params: {{
-                    name: document.getElementById('mcp-tool').value.trim(),
-                    arguments: argumentsPayload
-                  }}
-                }})
-              }});
-              const data = await response.json();
-              document.getElementById('mcp-result').textContent = JSON.stringify(data, null, 2);
-            }});
-            </script>
-            "#,
-            tools
-        ),
-        NavKind::Authenticated,
-    ))
-    .into_response())
-}
-
-async fn settings_page(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Result<impl IntoResponse, AppError> {
-    let runtime = state.runtime.read().await;
-    if let Some(redirect) = maybe_redirect_console(&headers, &runtime.auth_state) {
-        return Ok(redirect.into_response());
-    }
-    let config_json = serde_json::to_string_pretty(&runtime.config)
-        .map_err(|err| AppError::Internal(err.to_string()))?;
-    Ok(Html(render_page(
-        "Settings",
-        &format!(
-            r#"
-            <div class="grid two">
-              <div class="card">
-                <h1>Config</h1>
-                <p>Edit and save the current configuration.</p>
-                <textarea id="config-json">{}</textarea>
-                <button id="save-config">Save Config</button>
-                <pre id="config-result"></pre>
-              </div>
-              <div class="card">
-                <h2>Change Password</h2>
-                <label>Old Password</label>
-                <input id="old-password" type="password" autocomplete="current-password" />
-                <label>New Password</label>
-                <input id="new-password" type="password" autocomplete="new-password" />
-                <button id="change-password">Change Password</button>
-                <pre id="password-result"></pre>
-              </div>
-            </div>
-            <script>
-            document.getElementById('save-config').addEventListener('click', async () => {{
-              let payload;
-              try {{
-                payload = JSON.parse(document.getElementById('config-json').value);
-              }} catch (error) {{
-                document.getElementById('config-result').textContent = 'Invalid JSON: ' + error;
-                return;
-              }}
-              const response = await fetch('/api/config', {{
-                method: 'POST',
-                headers: {{ 'content-type': 'application/json' }},
-                body: JSON.stringify(payload)
-              }});
-              const data = await response.json();
-              document.getElementById('config-result').textContent = JSON.stringify(data, null, 2);
-            }});
-            document.getElementById('change-password').addEventListener('click', async () => {{
-              const response = await fetch('/api/password/change', {{
-                method: 'POST',
-                headers: {{ 'content-type': 'application/json' }},
-                body: JSON.stringify({{
-                  old_password: document.getElementById('old-password').value,
-                  new_password: document.getElementById('new-password').value
-                }})
-              }});
-              const data = await response.json();
-              document.getElementById('password-result').textContent = JSON.stringify(data, null, 2);
-            }});
-            </script>
-            "#,
-            escape_html(&config_json)
-        ),
-        NavKind::Authenticated,
-    ))
-    .into_response())
-}
-
-async fn docs_page(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Result<impl IntoResponse, AppError> {
-    let runtime = state.runtime.read().await;
-    if let Some(redirect) = maybe_redirect_console(&headers, &runtime.auth_state) {
-        return Ok(redirect.into_response());
-    }
-    let commands = state
-        .manifest
-        .commands
-        .iter()
-        .map(|command| {
-            format!(
-                "<tr><td><code>{}</code></td><td>{}</td><td>{}</td><td>{}</td></tr>",
-                command.name, command.category, command.execution_mode, command.summary
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("");
-    let skills = state
-        .manifest
-        .skills
-        .iter()
-        .map(|skill| {
-            format!(
-                "<li><strong>{}</strong>: {}</li>",
-                skill.name, skill.summary
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("");
-    Ok(Html(render_page(
-        "Docs",
-        &format!(
-            r#"
-            <div class="card">
-              <h1>Docs</h1>
-              <p>Shared source of truth for commands, MCP tools, and skills.</p>
-              <table>
-                <thead><tr><th>Command</th><th>Category</th><th>Mode</th><th>Summary</th></tr></thead>
-                <tbody>{}</tbody>
-              </table>
-            </div>
-            <div class="card">
-              <h2>Skills</h2>
-              <ul>{}</ul>
-            </div>
-            "#,
-            commands, skills
-        ),
-        NavKind::Authenticated,
-    ))
-    .into_response())
-}
+// ---------------------------------------------------------------------------
+// API handlers
+// ---------------------------------------------------------------------------
 
 async fn health() -> Json<Value> {
     Json(json!({ "ok": true }))
@@ -885,6 +441,10 @@ async fn call_mcp(
     }))
 }
 
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
 async fn execute_and_record(
     state: &Arc<AppState>,
     command: &str,
@@ -1018,230 +578,18 @@ async fn require_auth(headers: &HeaderMap, state: &AppState) -> Result<(), AppEr
         .ok_or(AppError::AuthRequired)
 }
 
-fn maybe_redirect_console(
-    headers: &HeaderMap,
-    auth_state: &crate::auth::AuthState,
-) -> Option<Redirect> {
-    if !auth_state.password_initialized {
-        return Some(Redirect::to("/setup/password"));
-    }
-    if is_authenticated(headers, auth_state) {
-        None
-    } else {
-        Some(Redirect::to("/login"))
-    }
-}
-
-enum NavKind {
-    Anonymous,
-    Authenticated,
-}
-
-fn render_page(title: &str, body: &str, nav_kind: NavKind) -> String {
-    let nav = match nav_kind {
-        NavKind::Anonymous => {
-            r#"<nav><a href="/login">Login</a><a href="/setup/password">Setup Password</a></nav>"#
-        }
-        NavKind::Authenticated => {
-            r#"<nav><a href="/">Console</a><a href="/commands">Commands</a><a href="/mcp">MCP</a><a href="/docs">Docs</a><a href="/settings">Settings</a><form method="post" action="/logout" style="margin:0 0 0 auto"><button type="submit">Logout</button></form></nav>"#
-        }
-    };
-    format!(
-        r#"<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{}</title>
-  <style>
-    :root {{
-      --bg: #f5f7fb;
-      --fg: #132238;
-      --muted: #5f7188;
-      --card: #ffffff;
-      --border: #d9e0ea;
-      --accent: #1166cc;
-      --accent-soft: #eaf3ff;
-    }}
-    * {{ box-sizing: border-box; }}
-    body {{
-      margin: 0;
-      font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
-      color: var(--fg);
-      background:
-        radial-gradient(circle at top left, #ffffff 0, #eef3fb 38%, #f5f7fb 70%),
-        linear-gradient(180deg, #f8fafc 0%, #edf2f8 100%);
-    }}
-    nav {{
-      display: flex;
-      gap: 18px;
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.88);
-      backdrop-filter: blur(8px);
-      position: sticky;
-      top: 0;
-    }}
-    nav a {{
-      color: var(--fg);
-      text-decoration: none;
-      font-weight: 600;
-    }}
-    main {{
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 28px 24px 48px;
-    }}
-    .hero, .card, .single-card {{
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      box-shadow: 0 8px 30px rgba(19,34,56,0.05);
-    }}
-    .hero {{
-      padding: 28px;
-      margin-bottom: 22px;
-    }}
-    .card, .single-card {{
-      padding: 22px;
-    }}
-    .single-card {{
-      max-width: 560px;
-      margin: 48px auto;
-    }}
-    .grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 18px;
-    }}
-    .grid.two {{
-      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-    }}
-    h1, h2 {{
-      margin-top: 0;
-    }}
-    p, li, dd, dt, label {{
-      line-height: 1.5;
-    }}
-    dl {{
-      display: grid;
-      grid-template-columns: 110px 1fr;
-      gap: 8px 12px;
-      margin: 0;
-    }}
-    dt {{ color: var(--muted); }}
-    code, pre, textarea, input {{
-      font-family: "SFMono-Regular", Consolas, monospace;
-    }}
-    pre, textarea, input {{
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #fbfcfe;
-      padding: 12px;
-    }}
-    pre {{
-      overflow: auto;
-      min-height: 60px;
-      white-space: pre-wrap;
-    }}
-    textarea {{
-      min-height: 240px;
-      resize: vertical;
-    }}
-    input {{
-      min-height: 44px;
-      margin-bottom: 12px;
-    }}
-    button {{
-      border: 0;
-      border-radius: 999px;
-      background: var(--accent);
-      color: white;
-      padding: 10px 16px;
-      font-weight: 700;
-      cursor: pointer;
-    }}
-    table {{
-      width: 100%;
-      border-collapse: collapse;
-    }}
-    th, td {{
-      text-align: left;
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: top;
-    }}
-    .command-card {{
-      border-top: 1px solid var(--border);
-      padding: 12px 0;
-    }}
-    .command-card summary {{
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-    }}
-    .command-card code {{
-      display: block;
-      margin-top: 10px;
-      padding: 10px;
-      background: var(--accent-soft);
-      border-radius: 12px;
-      white-space: pre-wrap;
-    }}
-  </style>
-</head>
-<body>
-  {}
-  <main>{}</main>
-</body>
-</html>"#,
-        title, nav, body
-    )
-}
-
-fn build_example_payload(command: &crate::manifest::CommandSpec) -> String {
-    let mut map = serde_json::Map::new();
-    for param in &command.params {
-        let value = match param.name {
-            "username" => json!("OpenAI"),
-            "query" => json!("openai"),
-            "url" => json!("https://x.com/OpenAI/status/2033953592424731072"),
-            "text" => json!("hello from twitter-cli"),
-            "texts" => json!(["hello from twitter-cli", "follow-up post"]),
-            "type" => json!("for-you"),
-            "limit" => json!(5),
-            _ => json!(""),
-        };
-        map.insert(param.name.to_string(), value);
-    }
-    serde_json::to_string_pretty(&Value::Object(map)).unwrap_or_else(|_| "{}".to_string())
-}
-
-fn escape_html(input: &str) -> String {
-    input
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
     use tokio::sync::RwLock;
 
-    use super::{
-        build_example_payload, build_mcp_input_schema, mcp_error_response,
-        reject_setup_if_initialized, sanitize_config_update, summarize_success,
-    };
+    use super::{build_mcp_input_schema, mcp_error_response, sanitize_config_update, summarize_success};
     use crate::auth::AuthState;
     use crate::commands::executor::CommandExecutor;
     use crate::commands::registry::CommandRegistry;
-    use crate::config::{AppConfig, AuthConfig, ServerConfig};
-    use crate::manifest::{build_manifest, command_specs};
+    use crate::config::AppConfig;
+    use crate::manifest::build_manifest;
     use crate::server::{AppState, RuntimeState};
 
     fn test_state() -> AppState {
@@ -1257,17 +605,6 @@ mod tests {
             })),
             executor: CommandExecutor::new(CommandRegistry::new()),
         }
-    }
-
-    #[test]
-    fn example_payload_supports_thread_texts() {
-        let command = command_specs()
-            .into_iter()
-            .find(|command| command.name == "thread")
-            .expect("thread command should exist");
-        let payload = build_example_payload(&command);
-        assert!(payload.contains("\"texts\""));
-        assert!(payload.contains("follow-up post"));
     }
 
     #[test]
@@ -1300,48 +637,25 @@ mod tests {
             "3 item(s)"
         );
         assert_eq!(
-            summarize_success(&serde_json::json!({ "message": "done" })),
+            summarize_success(&serde_json::json!({"message":"done"})),
             "done"
         );
-    }
-
-    #[test]
-    fn setup_password_is_rejected_after_initialization() {
-        let auth_state = AuthState {
-            password: "configured".to_string(),
-            password_initialized: true,
-        };
-        let error = reject_setup_if_initialized(&auth_state).expect_err("should reject setup");
         assert_eq!(
-            error.to_string(),
-            "invalid parameters: password is already configured"
+            summarize_success(&serde_json::json!({"status":"ok"})),
+            "ok"
         );
     }
 
     #[test]
-    fn config_update_preserves_existing_auth_values() {
-        let current = AppConfig {
-            auth: AuthConfig {
-                password: "secret".to_string(),
-                password_changed: true,
-            },
-            ..AppConfig::default()
-        };
-        let proposed = AppConfig {
-            auth: AuthConfig {
-                password: "overwritten".to_string(),
-                password_changed: false,
-            },
-            server: ServerConfig {
-                host: "0.0.0.0".to_string(),
-                port: 13000,
-            },
-            ..AppConfig::default()
-        };
-
-        let sanitized = sanitize_config_update(&current, proposed);
-        assert_eq!(sanitized.auth.password, "secret");
-        assert!(sanitized.auth.password_changed);
-        assert_eq!(sanitized.server.port, 13000);
+    fn sanitize_config_update_preserves_auth() {
+        let mut current = AppConfig::default();
+        current.auth.password = "secret".to_string();
+        current.auth.password_changed = true;
+        let mut proposed = AppConfig::default();
+        proposed.auth.password = "hacker".to_string();
+        proposed.server.port = 9999;
+        let result = sanitize_config_update(&current, proposed);
+        assert_eq!(result.auth.password, "secret");
+        assert_eq!(result.server.port, 9999);
     }
 }

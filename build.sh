@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Build frontend
+(cd frontend && npm ci && npm run build)
+
+# Build Rust
 if [ $# -eq 0 ]; then
   cargo build --release
 else

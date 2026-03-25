@@ -6,6 +6,7 @@ pub struct AgentBrowserOptions {
     pub binary: String,
     pub session_name: String,
     pub cdp_url: Option<String>,
+    pub timeout_secs: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

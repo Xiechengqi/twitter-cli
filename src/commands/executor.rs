@@ -36,6 +36,7 @@ impl CommandExecutor {
             } else {
                 Some(config.agent_browser.cdp_url.clone())
             },
+            timeout_secs: config.agent_browser.timeout_secs,
         });
 
         match command.name {

@@ -1,0 +1,124 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Nav } from '@/components/nav';
+import { Card } from '@/components/card';
+import { Spinner } from '@/components/spinner';
+import { useLang } from '@/lib/use-lang';
+import { t } from '@/lib/i18n';
+import * as api from '@/lib/api';
+import type { ToolSpec } from '@/lib/types';
+
+export default function McpPage() {
+  const { lang } = useLang();
+  const tr = t(lang).mcp;
+  const [tools, setTools] = useState<ToolSpec[]>([]);
+  const [toolName, setToolName] = useState('twitter_profile');
+  const [args, setArgs] = useState('{"username":"OpenAI"}');
+  const [result, setResult] = useState('');
+  const [running, setRunning] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.getMcpTools();
+        setTools(res.data);
+      } catch { /* 401 */ }
+      finally { setLoading(false); }
+    })();
+  }, []);
+
+  const handleCall = async () => {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(args.trim() || '{}');
+    } catch (e) {
+      setResult(`Invalid JSON: ${e}`);
+      return;
+    }
+    setRunning(true);
+    setResult('');
+    try {
+      const res = await api.callMcpTool(toolName, parsed);
+      setResult(JSON.stringify(res, null, 2));
+    } catch (e) {
+      setResult(`Network error: ${e}`);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Nav authenticated />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-16 flex justify-center"><Spinner /></main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Nav authenticated />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Left: caller */}
+          <Card hover={false}>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{tr.title}</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{tr.description}</p>
+            <pre className="mb-3 text-xs">Authorization: Bearer &lt;console-password&gt;</pre>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-1">{tr.endpoint}<code>/mcp</code></p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{tr.tool_index}<code>/api/mcp/tools</code></p>
+
+            <div className="space-y-4">
+              <div>
+                <label>{tr.tool_label}</label>
+                <input
+                  type="text"
+                  value={toolName}
+                  onChange={(e) => setToolName(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label>{tr.arguments_label}</label>
+                <textarea
+                  rows={3}
+                  value={args}
+                  onChange={(e) => setArgs(e.target.value)}
+                  className="mt-1 font-mono"
+                />
+              </div>
+              <button onClick={handleCall} disabled={running} className="btn-primary">
+                {running ? <><Spinner /> {tr.call_tool}</> : tr.call_tool}
+              </button>
+              {result && <pre className="mt-4 max-h-96 overflow-auto">{result}</pre>}
+            </div>
+          </Card>
+
+          {/* Right: tool list */}
+          <Card hover={false}>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{tr.tools_heading}</h2>
+            <ul className="space-y-2">
+              {tools.map((tool) => (
+                <li key={tool.name} className="flex items-center gap-2 text-sm">
+                  <span className="font-semibold text-slate-900 dark:text-white">{tool.name}</span>
+                  <span className="text-slate-400">&rarr;</span>
+                  <code>{tool.command}</code>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    tool.read_only
+                      ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400'
+                  }`}>
+                    {tool.read_only ? 'read' : 'write'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+      </main>
+    </>
+  );
+}

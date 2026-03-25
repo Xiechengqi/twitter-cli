@@ -25,6 +25,12 @@ pub struct AgentBrowserConfig {
     pub binary: String,
     pub cdp_url: String,
     pub session_name: String,
+    #[serde(default = "default_timeout_secs")]
+    pub timeout_secs: u64,
+}
+
+fn default_timeout_secs() -> u64 {
+    60
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,6 +64,7 @@ impl Default for AppConfig {
                 binary: "agent-browser".to_string(),
                 cdp_url: String::new(),
                 session_name: "twitter-cli".to_string(),
+                timeout_secs: 60,
             },
             vnc: VncConfig {
                 url: String::new(),

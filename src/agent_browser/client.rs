@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tokio::process::Command;
@@ -31,9 +33,15 @@ impl AgentBrowserClient {
         }
         command.args(args);
 
-        let output = command
-            .output()
+        let deadline = Duration::from_secs(self.options.timeout_secs);
+        let output = tokio::time::timeout(deadline, command.output())
             .await
+            .map_err(|_| {
+                AppError::BrowserExecutionFailed(format!(
+                    "agent-browser timed out after {}s",
+                    self.options.timeout_secs
+                ))
+            })?
             .map_err(|err| AppError::BrowserExecutionFailed(err.to_string()))?;
 
         if !output.status.success() {
