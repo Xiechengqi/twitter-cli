@@ -73,7 +73,7 @@ export async function executeCommand(
   command: string,
   params: Record<string, unknown>,
 ): Promise<ApiResponse<unknown>> {
-  return request(`/api/execute/${encodeURIComponent(command)}`, {
+  return request('/api/execute/' + encodeURIComponent(command), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ params, format: 'json' }),
@@ -97,12 +97,11 @@ export async function callMcpTool(
 }
 
 export async function changePassword(
-  oldPassword: string,
   newPassword: string,
 ): Promise<ApiResponse<{ password_changed: boolean }>> {
   return request('/api/password/change', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    body: JSON.stringify({ new_password: newPassword }),
   });
 }

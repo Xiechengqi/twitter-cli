@@ -32,24 +32,24 @@ const dict = {
     },
   },
   login: {
-    en: { title: 'Login', description: 'Use the Console password. The same credential also works as API and MCP Bearer token.', password: 'Password', submit: 'Login' },
-    zh: { title: '登录', description: '使用控制台密码。同一凭据也可用作 API 和 MCP Bearer token。', password: '密码', submit: '登录' },
+    en: { title: 'Login', description: 'Use the Console password. The same credential also works as API and MCP Bearer token.', password: 'Password', submit: 'Login', show: 'Show', hide: 'Hide' },
+    zh: { title: '登录', description: '使用控制台密码。同一凭据也可用作 API 和 MCP Bearer token。', password: '密码', submit: '登录', show: '显示', hide: '隐藏' },
   },
   setup_password: {
-    en: { title: 'Setup Password', description: 'First run requires a password. This password will also act as the API and MCP Bearer token.', password: 'Password', submit: 'Save Password' },
-    zh: { title: '设置密码', description: '首次运行需要设置密码。此密码也将用作 API 和 MCP Bearer token。', password: '密码', submit: '保存密码' },
+    en: { title: 'Setup Password', description: 'First run requires a password. This password will also act as the API and MCP Bearer token.', password: 'Password', submit: 'Save Password', show: 'Show', hide: 'Hide' },
+    zh: { title: '设置密码', description: '首次运行需要设置密码。此密码也将用作 API 和 MCP Bearer token。', password: '密码', submit: '保存密码', show: '显示', hide: '隐藏' },
   },
   commands: {
-    en: { title: 'Command Runner', description: 'Run any registered command through the same API used by CLI and MCP mappings.', command_label: 'Command', execute: 'Execute', running: ' Running\u2026', registered: 'Registered Commands' },
-    zh: { title: '命令执行器', description: '通过 CLI 和 MCP 映射使用的同一 API 运行任何已注册命令。', command_label: '命令', execute: '执行', running: ' 执行中\u2026', registered: '已注册命令' },
+    en: { title: 'Command Runner', description: 'Run any registered command through the same API used by CLI and MCP mappings.', command_label: 'Command', execute: 'Execute', running: ' Running…', registered: 'Registered Commands' },
+    zh: { title: '命令执行器', description: '通过 CLI 和 MCP 映射使用的同一 API 运行任何已注册命令。', command_label: '命令', execute: '执行', running: ' 执行中…', registered: '已注册命令' },
   },
   mcp: {
     en: { title: 'MCP', description: 'All MCP tools use the same password as Console and API.', endpoint: 'Endpoint: ', tool_index: 'Tool index: ', tool_label: 'Tool', arguments_label: 'Arguments (JSON)', call_tool: 'Call Tool', tools_heading: 'Tools' },
     zh: { title: 'MCP', description: '所有 MCP 工具使用与控制台和 API 相同的密码。', endpoint: '端点：', tool_index: '工具索引：', tool_label: '工具', arguments_label: '参数 (JSON)', call_tool: '调用工具', tools_heading: '工具列表' },
   },
   settings: {
-    en: { title: 'Settings', server: 'Server', host: 'Host', port: 'Port', agent_browser: 'Agent Browser', binary: 'Binary', cdp_url: 'CDP URL', session_name: 'Session Name', timeout: 'Timeout (seconds)', vnc: 'VNC', url: 'URL', username: 'Username', password: 'Password', embed: 'Embed', yes: 'Yes', no: 'No', save: 'Save Config', reset: 'Reset', change_password: 'Change Password', old_password: 'Old Password', new_password: 'New Password' },
-    zh: { title: '设置', server: '服务器', host: '主机', port: '端口', agent_browser: 'Agent Browser', binary: '可执行文件', cdp_url: 'CDP URL', session_name: '会话名称', timeout: '超时（秒）', vnc: 'VNC', url: 'URL', username: '用户名', password: '密码', embed: '嵌入', yes: '是', no: '否', save: '保存配置', reset: '重置', change_password: '修改密码', old_password: '旧密码', new_password: '新密码' },
+    en: { title: 'Settings', server: 'Server', host: 'Host', port: 'Port', agent_browser: 'Agent Browser', binary: 'Binary', cdp_url: 'CDP URL', session_name: 'Session Name', timeout: 'Timeout (seconds)', vnc: 'VNC', url: 'URL', username: 'Username', password: 'Password', embed: 'Embed', yes: 'Yes', no: 'No', save: 'Save Config', reset: 'Reset', change_password: 'Change Password', new_password: 'New Password', confirm_password: 'Confirm Password', password_mismatch: 'Passwords do not match', new_password_required: 'New password is required', show: 'Show', hide: 'Hide' },
+    zh: { title: '设置', server: '服务器', host: '主机', port: '端口', agent_browser: 'Agent Browser', binary: '可执行文件', cdp_url: 'CDP URL', session_name: '会话名称', timeout: '超时（秒）', vnc: 'VNC', url: 'URL', username: '用户名', password: '密码', embed: '嵌入', yes: '是', no: '否', save: '保存配置', reset: '重置', change_password: '修改密码', new_password: '新密码', confirm_password: '确认密码', password_mismatch: '两次输入的密码不一致', new_password_required: '请输入新密码', show: '显示', hide: '隐藏' },
   },
   docs: {
     en: { title: 'Docs', description: 'Shared source of truth for commands, MCP tools, and skills.', command: 'Command', category: 'Category', mode: 'Mode', summary: 'Summary', skills: 'Skills' },

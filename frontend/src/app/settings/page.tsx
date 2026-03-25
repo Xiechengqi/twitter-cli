@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
+import { PasswordInput } from '@/components/password-input';
 import { Spinner } from '@/components/spinner';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
@@ -17,7 +18,6 @@ export default function SettingsPage() {
   const [saveResult, setSaveResult] = useState('');
   const [pwResult, setPwResult] = useState('');
 
-  // form fields
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
   const [binary, setBinary] = useState('');
@@ -28,8 +28,8 @@ export default function SettingsPage() {
   const [vncUser, setVncUser] = useState('');
   const [vncPass, setVncPass] = useState('');
   const [vncEmbed, setVncEmbed] = useState('false');
-  const [oldPw, setOldPw] = useState('');
   const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -47,8 +47,10 @@ export default function SettingsPage() {
         setVncUser(c.vnc.username);
         setVncPass(c.vnc.password);
         setVncEmbed(c.vnc.embed ? 'true' : 'false');
-      } catch { /* 401 */ }
-      finally { setLoading(false); }
+      } catch {
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -67,6 +69,7 @@ export default function SettingsPage() {
     };
     try {
       const res = await api.updateConfig(payload);
+      setConfig(payload);
       setSaveResult(JSON.stringify(res, null, 2));
     } catch (e) {
       setSaveResult(`Error: ${e}`);
@@ -75,11 +78,24 @@ export default function SettingsPage() {
 
   const handleReset = () => window.location.reload();
 
+  const passwordsMatch = newPw === confirmPw;
+  const canSubmitPassword = newPw.length > 0 && confirmPw.length > 0 && passwordsMatch;
+
   const handleChangePassword = async () => {
     setPwResult('');
+    if (newPw.length === 0) {
+      setPwResult(tr.new_password_required);
+      return;
+    }
+    if (!passwordsMatch) {
+      setPwResult(tr.password_mismatch);
+      return;
+    }
     try {
-      const res = await api.changePassword(oldPw, newPw);
+      const res = await api.changePassword(newPw);
       setPwResult(JSON.stringify(res, null, 2));
+      setNewPw('');
+      setConfirmPw('');
     } catch (e) {
       setPwResult(`Error: ${e}`);
     }
@@ -98,7 +114,6 @@ export default function SettingsPage() {
     <>
       <Nav authenticated />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-16 space-y-6">
-        {/* Server */}
         <Card hover={false}>
           <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.server}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -107,7 +122,6 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        {/* Agent Browser */}
         <Card hover={false}>
           <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.agent_browser}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -118,13 +132,18 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        {/* VNC */}
         <Card hover={false}>
           <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.vnc}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label>{tr.url}</label><input type="text" value={vncUrl} onChange={(e) => setVncUrl(e.target.value)} /></div>
             <div><label>{tr.username}</label><input type="text" value={vncUser} onChange={(e) => setVncUser(e.target.value)} /></div>
-            <div><label>{tr.password}</label><input type="password" value={vncPass} onChange={(e) => setVncPass(e.target.value)} /></div>
+            <PasswordInput
+              label={tr.password}
+              value={vncPass}
+              onChange={setVncPass}
+              showLabel={tr.show}
+              hideLabel={tr.hide}
+            />
             <div>
               <label>{tr.embed}</label>
               <select value={vncEmbed} onChange={(e) => setVncEmbed(e.target.value)}>
@@ -135,21 +154,38 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        {/* Save / Reset */}
         <div className="flex gap-3">
           <button onClick={handleSave} className="btn-primary">{tr.save}</button>
           <button onClick={handleReset} className="btn-secondary">{tr.reset}</button>
         </div>
         {saveResult && <pre>{saveResult}</pre>}
 
-        {/* Change Password */}
         <Card hover={false}>
           <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.change_password}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div><label>{tr.old_password}</label><input type="password" autoComplete="current-password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} /></div>
-            <div><label>{tr.new_password}</label><input type="password" autoComplete="new-password" value={newPw} onChange={(e) => setNewPw(e.target.value)} /></div>
+            <PasswordInput
+              label={tr.new_password}
+              value={newPw}
+              onChange={setNewPw}
+              autoComplete="new-password"
+              showLabel={tr.show}
+              hideLabel={tr.hide}
+            />
+            <PasswordInput
+              label={tr.confirm_password}
+              value={confirmPw}
+              onChange={setConfirmPw}
+              autoComplete="new-password"
+              showLabel={tr.show}
+              hideLabel={tr.hide}
+            />
           </div>
-          <button onClick={handleChangePassword} className="btn-primary mt-4">{tr.change_password}</button>
+          {newPw.length > 0 && confirmPw.length > 0 && !passwordsMatch && (
+            <p className="mt-4 text-sm text-red-600">{tr.password_mismatch}</p>
+          )}
+          <button onClick={handleChangePassword} className="btn-primary mt-4" disabled={!canSubmitPassword}>
+            {tr.change_password}
+          </button>
           {pwResult && <pre className="mt-4">{pwResult}</pre>}
         </Card>
       </main>

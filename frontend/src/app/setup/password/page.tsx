@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
+import { PasswordInput } from '@/components/password-input';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
@@ -40,17 +41,15 @@ export default function SetupPasswordPage() {
           <h1 className="text-2xl font-bold text-slate-900 mb-2">{tr.title}</h1>
           <p className="text-sm text-slate-500 mb-6">{tr.description}</p>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="password">{tr.password}</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1"
-              />
-            </div>
+            <PasswordInput
+              id="password"
+              label={tr.password}
+              value={password}
+              onChange={setPassword}
+              autoComplete="new-password"
+              showLabel={tr.show}
+              hideLabel={tr.hide}
+            />
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {tr.submit}

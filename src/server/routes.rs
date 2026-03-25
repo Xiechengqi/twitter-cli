@@ -34,10 +34,6 @@ pub fn router(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
-// ---------------------------------------------------------------------------
-// API handlers
-// ---------------------------------------------------------------------------
-
 async fn health() -> Json<Value> {
     Json(json!({ "ok": true }))
 }
@@ -152,7 +148,6 @@ async fn update_config(
     let mut runtime = state.runtime.write().await;
     let updated = sanitize_config_update(&runtime.config, payload);
 
-    // If cdp_url changed, reconnect agent-browser
     let cdp_changed = updated.agent_browser.cdp_url != runtime.config.agent_browser.cdp_url
         && !updated.agent_browser.cdp_url.is_empty();
 
@@ -163,7 +158,6 @@ async fn update_config(
     if cdp_changed {
         let binary = updated.agent_browser.binary.clone();
         let cdp_url = updated.agent_browser.cdp_url.clone();
-        // Spawn reconnect in background so we don't block the response
         tokio::spawn(async move {
             config::reconnect_agent_browser(&binary, &cdp_url).await;
         });
@@ -225,7 +219,8 @@ async fn get_skills(
 
 #[derive(Deserialize)]
 struct ChangePasswordRequest {
-    old_password: String,
+    #[allow(dead_code)]
+    old_password: Option<String>,
     new_password: String,
 }
 
@@ -242,10 +237,6 @@ async fn change_password(
     }
 
     let mut runtime = state.runtime.write().await;
-    if payload.old_password != runtime.auth_state.password {
-        return Err(AppError::InvalidPassword);
-    }
-
     let mut updated = runtime.config.clone();
     updated.auth.password = payload.new_password;
     updated.auth.password_changed = true;
@@ -455,10 +446,6 @@ async fn call_mcp(
         }
     }))
 }
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
 
 async fn execute_and_record(
     state: &Arc<AppState>,
