@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
@@ -11,32 +11,12 @@ import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
 import type { ToolSpec, CommandSpec } from '@/lib/types';
 
-const EXAMPLE_VALUES: Record<string, unknown> = {
-  username: 'OpenAI',
-  query: 'openai',
-  url: 'https://x.com/OpenAI/status/2033953592424731072',
-  text: 'hello from twitter-cli',
-  texts: ['hello from twitter-cli', 'follow-up post'],
-  type: 'for-you',
-  limit: 5,
-};
-
-function buildExampleArgs(commands: CommandSpec[], tool: ToolSpec): string {
-  const cmd = commands.find((c) => c.name === tool.command);
-  if (!cmd || cmd.params.length === 0) return '{}';
-  const map: Record<string, unknown> = {};
-  for (const p of cmd.params) {
-    map[p.name] = EXAMPLE_VALUES[p.name] ?? '';
-  }
-  return JSON.stringify(map, null, 2);
-}
-
-function buildCurlCommand(toolName: string, argsJson: string): string {
+function buildCurlCommand(toolName: string, args: Record<string, unknown>): string {
   const body = JSON.stringify({
     jsonrpc: '2.0',
     id: 'console',
     method: 'tools/call',
-    params: { name: toolName, arguments: JSON.parse(argsJson.trim() || '{}') },
+    params: { name: toolName, arguments: args },
   });
   return `curl -X POST http://localhost:12233/mcp \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer <password>' \\\n  -d '${body}'`;
 }
@@ -47,7 +27,7 @@ export default function McpPage() {
   const [tools, setTools] = useState<ToolSpec[]>([]);
   const [commands, setCommands] = useState<CommandSpec[]>([]);
   const [toolName, setToolName] = useState('');
-  const [args, setArgs] = useState('{}');
+  const [params, setParams] = useState<Record<string, string>>({});
   const [result, setResult] = useState('');
   const [curlCmd, setCurlCmd] = useState('');
   const [running, setRunning] = useState(false);
@@ -61,38 +41,52 @@ export default function McpPage() {
         setCommands(cmdRes.data);
         if (toolRes.data.length > 0) {
           setToolName(toolRes.data[0].name);
-          setArgs(buildExampleArgs(cmdRes.data, toolRes.data[0]));
         }
       } catch { /* 401 */ }
       finally { setLoading(false); }
     })();
   }, []);
 
+  const selectedTool = useMemo(() => tools.find((t) => t.name === toolName), [tools, toolName]);
+  const cmdSpec = useMemo(() => {
+    if (!selectedTool) return undefined;
+    return commands.find((c) => c.name === selectedTool.command);
+  }, [commands, selectedTool]);
+
   const handleToolChange = useCallback((name: string) => {
     setToolName(name);
+    setParams({});
     setResult('');
     setCurlCmd('');
-    const tool = tools.find((t) => t.name === name);
-    if (tool) {
-      setArgs(buildExampleArgs(commands, tool));
+  }, []);
+
+  const handleParamChange = (name: string, value: string) => {
+    setParams((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const parseParams = (): Record<string, unknown> | null => {
+    if (!cmdSpec) return {};
+    const parsed: Record<string, unknown> = {};
+    for (const p of cmdSpec.params) {
+      const val = (params[p.name] || '').trim();
+      if (!val) continue;
+      if (p.kind === 'integer') {
+        parsed[p.name] = parseInt(val, 10);
+      } else if (p.kind === 'array') {
+        try { parsed[p.name] = JSON.parse(val); }
+        catch (e) { setResult(`Invalid JSON for ${p.name}: ${e}`); return null; }
+      } else {
+        parsed[p.name] = val;
+      }
     }
-  }, [tools, commands]);
+    return parsed;
+  };
 
   const handleCall = async () => {
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(args.trim() || '{}');
-    } catch (e) {
-      setResult(`Invalid JSON: ${e}`);
-      return;
-    }
+    const parsed = parseParams();
+    if (!parsed) return;
 
-    try {
-      setCurlCmd(buildCurlCommand(toolName, args));
-    } catch {
-      setCurlCmd('');
-    }
-
+    setCurlCmd(buildCurlCommand(toolName, parsed));
     setRunning(true);
     setResult('');
     try {
@@ -138,22 +132,39 @@ export default function McpPage() {
                   >
                     {tools.map((tool) => (
                       <option key={tool.name} value={tool.name}>
-                        {tool.name} → {tool.command} ({tool.read_only ? 'read' : 'write'})
+                        {tool.name} → {tool.command}
                       </option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 h-4 w-4 text-slate-400 pointer-events-none" />
                 </div>
               </div>
-              <div>
-                <label>{tr.arguments_label}</label>
-                <textarea
-                  rows={3}
-                  value={args}
-                  onChange={(e) => setArgs(e.target.value)}
-                  className="mt-1 font-mono"
-                />
-              </div>
+
+              {cmdSpec?.params.map((p) => (
+                <div key={p.name}>
+                  <label>
+                    {p.name}{p.required && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+                  {p.kind === 'array' ? (
+                    <textarea
+                      rows={2}
+                      placeholder={`${p.description} (JSON array)`}
+                      value={params[p.name] || ''}
+                      onChange={(e) => handleParamChange(p.name, e.target.value)}
+                      className="mt-1"
+                    />
+                  ) : (
+                    <input
+                      type={p.kind === 'integer' ? 'number' : 'text'}
+                      placeholder={p.description}
+                      value={params[p.name] || ''}
+                      onChange={(e) => handleParamChange(p.name, e.target.value)}
+                      className="mt-1"
+                    />
+                  )}
+                </div>
+              ))}
+
               <button onClick={handleCall} disabled={running} className="btn-primary">
                 {running ? <><Spinner /> {tr.call_tool}</> : tr.call_tool}
               </button>
