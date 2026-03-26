@@ -18,7 +18,8 @@ const dict = {
       action_mcp: 'Review MCP tools and auth model',
       action_settings: 'Adjust server, agent-browser, and auth settings',
       vnc_preview: 'Embedded preview from ', vnc_not_configured: 'VNC is not configured or embedding is disabled.',
-      dt_api: 'API', dt_docs: 'Docs', dt_config: 'Config', dt_binary: 'Binary', dt_cdp_url: 'CDP URL', dt_session: 'Session',
+      dt_api: 'API', dt_docs: 'Docs', dt_config: 'Config', dt_binary: 'Binary', dt_cdp_url: 'CDP URL',
+      binary_not_set: 'Not installed. Install from', cdp_not_set: 'Not configured. Run:',
     },
     zh: {
       title: '控制台', tagline: '基于 ', tagline_suffix: ' 的本地 Twitter 自动化控制面板。',
@@ -28,7 +29,8 @@ const dict = {
       action_mcp: '查看 MCP 工具和认证模型',
       action_settings: '调整服务器、agent-browser 和认证设置',
       vnc_preview: '嵌入预览来自 ', vnc_not_configured: 'VNC 未配置或嵌入已禁用。',
-      dt_api: 'API', dt_docs: '文档', dt_config: '配置', dt_binary: '可执行文件', dt_cdp_url: 'CDP URL', dt_session: '会话',
+      dt_api: 'API', dt_docs: '文档', dt_config: '配置', dt_binary: '可执行文件', dt_cdp_url: 'CDP URL',
+      binary_not_set: '未安装，从以下地址安装', cdp_not_set: '未配置，请执行：',
     },
   },
   login: {

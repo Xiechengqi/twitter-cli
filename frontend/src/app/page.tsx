@@ -13,6 +13,15 @@ import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
 import type { AppConfig, ExecutionRecord } from '@/lib/types';
 
+function extractCdpHost(url: string): string {
+  try {
+    const u = new URL(url.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:'));
+    return `${u.hostname}:${u.port}`;
+  } catch {
+    return url;
+  }
+}
+
 export default function HomePage() {
   const { lang } = useLang();
   const tr = t(lang).home;
@@ -80,15 +89,25 @@ export default function HomePage() {
           <Card>
             <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.agent_browser}</h2>
             <dl className="space-y-3">
-              <div><dt>{tr.dt_binary}</dt><dd><code>{config?.agent_browser.binary}</code></dd></div>
+              <div>
+                <dt>{tr.dt_binary}</dt>
+                <dd>
+                  {config?.agent_browser.binary
+                    ? <code>{config.agent_browser.binary}</code>
+                    : <span className="text-amber-600 text-xs">{tr.binary_not_set} <a href="https://github.com/vercel-labs/agent-browser" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-700">github.com/vercel-labs/agent-browser</a></span>
+                  }
+                </dd>
+              </div>
               <div>
                 <dt>{tr.dt_cdp_url}</dt>
                 <dd>
                   <StatusDot ok={!!config?.agent_browser.cdp_url} />
-                  <code>{config?.agent_browser.cdp_url || tr.not_set}</code>
+                  {config?.agent_browser.cdp_url
+                    ? <code>{extractCdpHost(config.agent_browser.cdp_url)}</code>
+                    : <span className="text-amber-600 text-xs">{tr.cdp_not_set} <code>agent-browser connect &lt;port|url&gt;</code></span>
+                  }
                 </dd>
               </div>
-              <div><dt>{tr.dt_session}</dt><dd><code>{config?.agent_browser.session_name}</code></dd></div>
             </dl>
           </Card>
 
