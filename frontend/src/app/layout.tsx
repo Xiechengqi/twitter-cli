@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { BgOrbs } from '@/components/bg-orbs';
+import { Providers } from '@/components/providers';
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -17,16 +18,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme')||'auto';var d=t==='dark'||(t==='auto'&&window.matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}})()`,
-          }}
-        />
-      </head>
       <body className={`${jakarta.variable} font-sans`}>
-        <BgOrbs />
-        {children}
+        <Providers>
+          <BgOrbs />
+          {children}
+        </Providers>
       </body>
     </html>
   );
