@@ -177,13 +177,6 @@ export default function McpPage() {
                   <span className="font-semibold text-slate-900">{tool.name}</span>
                   <span className="text-slate-400">&rarr;</span>
                   <code>{tool.command}</code>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                    tool.read_only
-                      ? 'bg-emerald-50 text-emerald-600'
-                      : 'bg-amber-50 text-amber-600'
-                  }`}>
-                    {tool.read_only ? 'read' : 'write'}
-                  </span>
                 </li>
               ))}
             </ul>

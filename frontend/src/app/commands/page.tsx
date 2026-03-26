@@ -193,7 +193,6 @@ export default function CommandsPage() {
                 <details key={c.name} className="group border border-slate-100 rounded-lg">
                   <summary className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50 rounded-lg transition-colors">
                     <span className="font-semibold text-sm text-slate-900">{c.name}</span>
-                    <span className="text-xs text-slate-500">{c.execution_mode}</span>
                   </summary>
                   <div className="px-3 pb-3 text-sm text-slate-600">
                     <p className="mb-2">{c.summary}</p>
