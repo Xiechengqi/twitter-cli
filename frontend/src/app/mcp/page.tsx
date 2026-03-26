@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
 import { Spinner } from '@/components/spinner';
@@ -115,31 +114,13 @@ export default function McpPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Left: caller */}
           <Card hover={false}>
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">{tr.title}</h1>
-            <p className="text-sm text-slate-500 mb-4">{tr.description}</p>
-            <pre className="mb-3 text-xs">Authorization: Bearer &lt;console-password&gt;</pre>
-            <p className="text-sm text-slate-600 mb-1">{tr.endpoint}<code>/mcp</code></p>
-            <p className="text-sm text-slate-600 mb-6">{tr.tool_index}<code>/api/mcp/tools</code></p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">{selectedTool?.name || tr.title}</h1>
+            <p className="text-sm text-slate-500 mb-4">
+              {selectedTool ? <>{tr.endpoint}<code>/mcp</code> &middot; command: <code>{selectedTool.command}</code></> : tr.description}
+            </p>
+            <pre className="mb-6 text-xs">Authorization: Bearer &lt;console-password&gt;</pre>
 
             <div className="space-y-4">
-              <div>
-                <label>{tr.tool_label}</label>
-                <div className="relative">
-                  <select
-                    value={toolName}
-                    onChange={(e) => handleToolChange(e.target.value)}
-                    className="mt-1 appearance-none pr-10"
-                  >
-                    {tools.map((tool) => (
-                      <option key={tool.name} value={tool.name}>
-                        {tool.name} → {tool.command}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 h-4 w-4 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
               {cmdSpec?.params.map((p) => (
                 <div key={p.name}>
                   <label>
@@ -182,12 +163,19 @@ export default function McpPage() {
           {/* Right: tool list */}
           <Card hover={false}>
             <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.tools_heading}</h2>
-            <ul className="space-y-2">
+            <ul className="space-y-1">
               {tools.map((tool) => (
-                <li key={tool.name} className="flex items-center gap-2 text-sm">
-                  <span className="font-semibold text-slate-900">{tool.name}</span>
-                  <span className="text-slate-400">&rarr;</span>
-                  <code>{tool.command}</code>
+                <li key={tool.name}>
+                  <button
+                    onClick={() => handleToolChange(tool.name)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                      tool.name === toolName
+                        ? 'bg-brand-50 text-brand-600 font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {tool.name}
+                  </button>
                 </li>
               ))}
             </ul>

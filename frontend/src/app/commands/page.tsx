@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
 import { Spinner } from '@/components/spinner';
@@ -10,23 +9,6 @@ import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
 import type { CommandSpec } from '@/lib/types';
-
-function buildExample(cmd: CommandSpec): string {
-  const map: Record<string, unknown> = {};
-  for (const p of cmd.params) {
-    const examples: Record<string, unknown> = {
-      username: 'OpenAI',
-      query: 'openai',
-      url: 'https://x.com/OpenAI/status/2033953592424731072',
-      text: 'hello from twitter-cli',
-      texts: ['hello from twitter-cli', 'follow-up post'],
-      type: 'for-you',
-      limit: 5,
-    };
-    map[p.name] = examples[p.name] ?? '';
-  }
-  return JSON.stringify(map, null, 2);
-}
 
 function buildCliCommand(name: string, params: Record<string, unknown>): string {
   const json = JSON.stringify(params);
@@ -59,6 +41,13 @@ export default function CommandsPage() {
   }, []);
 
   const cmd = useMemo(() => commands.find((c) => c.name === selected), [commands, selected]);
+
+  const handleSelect = (name: string) => {
+    setSelected(name);
+    setParams({});
+    setResult('');
+    setCliCmd('');
+  };
 
   const handleParamChange = (name: string, value: string) => {
     setParams((prev) => ({ ...prev, [name]: value }));
@@ -115,28 +104,10 @@ export default function CommandsPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Left: executor */}
           <Card hover={false}>
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">{tr.title}</h1>
-            <p className="text-sm text-slate-500 mb-6">{tr.description}</p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">{cmd?.name || tr.title}</h1>
+            <p className="text-sm text-slate-500 mb-6">{cmd?.summary || tr.description}</p>
 
             <div className="space-y-4">
-              <div>
-                <label>{tr.command_label}</label>
-                <div className="relative">
-                  <select
-                    value={selected}
-                    onChange={(e) => { setSelected(e.target.value); setParams({}); setResult(''); setCliCmd(''); }}
-                    className="mt-1 appearance-none pr-10"
-                  >
-                    {commands.map((c) => (
-                      <option key={c.name} value={c.name}>
-                        {c.name} — {c.summary}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 h-4 w-4 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
               {cmd?.params.map((p) => (
                 <div key={p.name}>
                   <label>
@@ -174,7 +145,7 @@ export default function CommandsPage() {
                 <pre className="mt-4 text-xs"><span className="text-slate-400">$ </span>{cliCmd}</pre>
               )}
 
-              {result && <pre className="mt-2 max-h-96 overflow-auto">{result}</pre>}
+              {result && <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words">{result}</pre>}
 
               <VncEmbed />
             </div>
@@ -183,12 +154,19 @@ export default function CommandsPage() {
           {/* Right: command list */}
           <Card hover={false}>
             <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.registered}</h2>
-            <ul className="space-y-2">
+            <ul className="space-y-1">
               {commands.map((c) => (
-                <li key={c.name} className="flex items-center gap-2 text-sm">
-                  <span className="font-semibold text-slate-900">{c.name}</span>
-                  <span className="text-slate-400">&mdash;</span>
-                  <span className="text-slate-600">{c.summary}</span>
+                <li key={c.name}>
+                  <button
+                    onClick={() => handleSelect(c.name)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                      c.name === selected
+                        ? 'bg-brand-50 text-brand-600 font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {c.name}
+                  </button>
                 </li>
               ))}
             </ul>
