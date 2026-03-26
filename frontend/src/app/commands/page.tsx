@@ -188,19 +188,15 @@ export default function CommandsPage() {
           {/* Right: command list */}
           <Card hover={false}>
             <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.registered}</h2>
-            <div className="space-y-2">
+            <ul className="space-y-2">
               {commands.map((c) => (
-                <details key={c.name} className="group border border-slate-100 rounded-lg">
-                  <summary className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50 rounded-lg transition-colors">
-                    <span className="font-semibold text-sm text-slate-900">{c.name}</span>
-                  </summary>
-                  <div className="px-3 pb-3 text-sm text-slate-600">
-                    <p className="mb-2">{c.summary}</p>
-                    <pre className="text-xs">{buildExample(c)}</pre>
-                  </div>
-                </details>
+                <li key={c.name} className="flex items-center gap-2 text-sm">
+                  <span className="font-semibold text-slate-900">{c.name}</span>
+                  <span className="text-slate-400">&mdash;</span>
+                  <span className="text-slate-600">{c.summary}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </Card>
         </div>
       </main>

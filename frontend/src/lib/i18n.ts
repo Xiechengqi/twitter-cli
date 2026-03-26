@@ -40,8 +40,8 @@ const dict = {
     zh: { title: '设置密码', description: '首次运行需要设置密码。此密码也将用作 API 和 MCP Bearer token。', password: '密码', submit: '保存密码', show: '显示', hide: '隐藏' },
   },
   commands: {
-    en: { title: 'Command Runner', description: 'Run any registered command through the same API used by CLI and MCP mappings.', command_label: 'Command', execute: 'Execute', running: ' Running…', registered: 'Registered Commands' },
-    zh: { title: '命令执行器', description: '通过 CLI 和 MCP 映射使用的同一 API 运行任何已注册命令。', command_label: '命令', execute: '执行', running: ' 执行中…', registered: '已注册命令' },
+    en: { title: 'Command Runner', description: 'Run any registered command through the same API used by CLI and MCP mappings.', command_label: 'Command', execute: 'Execute', running: ' Running…', registered: 'Commands' },
+    zh: { title: '命令执行器', description: '通过 CLI 和 MCP 映射使用的同一 API 运行任何已注册命令。', command_label: '命令', execute: '执行', running: ' 执行中…', registered: '命令列表' },
   },
   mcp: {
     en: { title: 'MCP', description: 'All MCP tools use the same password as Console and API.', endpoint: 'Endpoint: ', tool_index: 'Tool index: ', tool_label: 'Tool', arguments_label: 'Arguments (JSON)', call_tool: 'Call Tool', tools_heading: 'Tools' },
