@@ -9,8 +9,6 @@ type PasswordInputProps = {
   value: string;
   onChange: (value: string) => void;
   autoComplete?: string;
-  showLabel: string;
-  hideLabel: string;
   className?: string;
 };
 
@@ -20,8 +18,6 @@ export function PasswordInput({
   value,
   onChange,
   autoComplete,
-  showLabel,
-  hideLabel,
   className,
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
@@ -29,22 +25,22 @@ export function PasswordInput({
   return (
     <div className={className}>
       <label htmlFor={id}>{label}</label>
-      <div className="mt-1 flex items-center gap-2">
+      <div className="relative mt-1">
         <input
           id={id}
           type={visible ? 'text' : 'password'}
           autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          className="pr-10"
         />
         <button
           type="button"
-          className="btn-secondary shrink-0 px-3 py-2"
-          onClick={() => setVisible((current) => (current ? false : true))}
-          aria-label={visible ? hideLabel : showLabel}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
+          onClick={() => setVisible((v) => !v)}
+          tabIndex={-1}
         >
           {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          <span>{visible ? hideLabel : showLabel}</span>
         </button>
       </div>
     </div>

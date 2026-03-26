@@ -47,8 +47,6 @@ export default function LoginPage() {
               value={password}
               onChange={setPassword}
               autoComplete="current-password"
-              showLabel={tr.show}
-              hideLabel={tr.hide}
             />
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" className="btn-primary w-full" disabled={loading}>

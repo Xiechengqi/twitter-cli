@@ -27,7 +27,6 @@ export default function SettingsPage() {
   const [vncUrl, setVncUrl] = useState('');
   const [vncUser, setVncUser] = useState('');
   const [vncPass, setVncPass] = useState('');
-  const [vncEmbed, setVncEmbed] = useState('false');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
 
@@ -46,7 +45,6 @@ export default function SettingsPage() {
         setVncUrl(c.vnc.url);
         setVncUser(c.vnc.username);
         setVncPass(c.vnc.password);
-        setVncEmbed(c.vnc.embed ? 'true' : 'false');
       } catch {
       } finally {
         setLoading(false);
@@ -65,7 +63,7 @@ export default function SettingsPage() {
         session_name: sessionName,
         timeout_secs: parseInt(timeout, 10) || 60,
       },
-      vnc: { url: vncUrl, username: vncUser, password: vncPass, embed: vncEmbed === 'true' },
+      vnc: { url: vncUrl, username: vncUser, password: vncPass, embed: true },
     };
     try {
       const res = await api.updateConfig(payload);
@@ -141,16 +139,7 @@ export default function SettingsPage() {
               label={tr.password}
               value={vncPass}
               onChange={setVncPass}
-              showLabel={tr.show}
-              hideLabel={tr.hide}
             />
-            <div>
-              <label>{tr.embed}</label>
-              <select value={vncEmbed} onChange={(e) => setVncEmbed(e.target.value)}>
-                <option value="true">{tr.yes}</option>
-                <option value="false">{tr.no}</option>
-              </select>
-            </div>
           </div>
         </Card>
 
@@ -168,16 +157,12 @@ export default function SettingsPage() {
               value={newPw}
               onChange={setNewPw}
               autoComplete="new-password"
-              showLabel={tr.show}
-              hideLabel={tr.hide}
             />
             <PasswordInput
               label={tr.confirm_password}
               value={confirmPw}
               onChange={setConfirmPw}
               autoComplete="new-password"
-              showLabel={tr.show}
-              hideLabel={tr.hide}
             />
           </div>
           {newPw.length > 0 && confirmPw.length > 0 && !passwordsMatch && (

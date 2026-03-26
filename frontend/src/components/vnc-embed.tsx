@@ -23,7 +23,7 @@ export function VncEmbed() {
     })();
   }, []);
 
-  const configured = config ? !!(config.vnc.url && config.vnc.embed) : false;
+  const configured = config ? !!config.vnc.url : false;
 
   const handleRefresh = useCallback(() => {
     const iframe = iframeRef.current;
