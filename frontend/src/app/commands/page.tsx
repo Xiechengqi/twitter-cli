@@ -29,16 +29,11 @@ function buildExample(cmd: CommandSpec): string {
 }
 
 function buildCliCommand(name: string, params: Record<string, unknown>): string {
-  const parts = ['twitter-cli', name];
-  for (const [key, val] of Object.entries(params)) {
-    if (val === '' || val === undefined || val === null) continue;
-    if (Array.isArray(val)) {
-      parts.push(`--${key}`, JSON.stringify(val));
-    } else {
-      parts.push(`--${key}`, String(val));
-    }
+  const json = JSON.stringify(params);
+  if (json === '{}') {
+    return `twitter-cli execute ${name}`;
   }
-  return parts.join(' ');
+  return `twitter-cli execute ${name} --params '${json}'`;
 }
 
 export default function CommandsPage() {
