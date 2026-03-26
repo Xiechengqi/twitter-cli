@@ -10,6 +10,15 @@ import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
 import type { AppConfig } from '@/lib/types';
 
+function extractCdpHost(url: string): string {
+  try {
+    const u = new URL(url.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:'));
+    return `${u.hostname}:${u.port}`;
+  } catch {
+    return url;
+  }
+}
+
 export default function SettingsPage() {
   const { lang } = useLang();
   const tr = t(lang).settings;
@@ -20,9 +29,6 @@ export default function SettingsPage() {
 
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
-  const [binary, setBinary] = useState('');
-  const [cdpUrl, setCdpUrl] = useState('');
-  const [sessionName, setSessionName] = useState('');
   const [timeout, setTimeout_] = useState('');
   const [vncUrl, setVncUrl] = useState('');
   const [vncUser, setVncUser] = useState('');
@@ -38,9 +44,6 @@ export default function SettingsPage() {
         setConfig(c);
         setHost(c.server.host);
         setPort(String(c.server.port));
-        setBinary(c.agent_browser.binary);
-        setCdpUrl(c.agent_browser.cdp_url);
-        setSessionName(c.agent_browser.session_name);
         setTimeout_(String(c.agent_browser.timeout_secs));
         setVncUrl(c.vnc.url);
         setVncUser(c.vnc.username);
@@ -54,13 +57,14 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaveResult('');
+    if (!config) return;
     const payload: AppConfig = {
       server: { host, port: parseInt(port, 10) || 12233 },
       auth: { password: '', password_changed: false },
       agent_browser: {
-        binary,
-        cdp_url: cdpUrl,
-        session_name: sessionName,
+        binary: config.agent_browser.binary,
+        cdp_url: config.agent_browser.cdp_url,
+        session_name: config.agent_browser.session_name,
         timeout_secs: parseInt(timeout, 10) || 60,
       },
       vnc: { url: vncUrl, username: vncUser, password: vncPass, embed: true },
@@ -108,6 +112,10 @@ export default function SettingsPage() {
     );
   }
 
+  const cdpDisplay = config?.agent_browser.cdp_url
+    ? extractCdpHost(config.agent_browser.cdp_url)
+    : '';
+
   return (
     <>
       <Nav authenticated />
@@ -123,9 +131,25 @@ export default function SettingsPage() {
         <Card hover={false}>
           <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.agent_browser}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div><label>{tr.binary}</label><input type="text" value={binary} onChange={(e) => setBinary(e.target.value)} /></div>
-            <div><label>{tr.cdp_url}</label><input type="text" value={cdpUrl} onChange={(e) => setCdpUrl(e.target.value)} /></div>
-            <div><label>{tr.session_name}</label><input type="text" value={sessionName} onChange={(e) => setSessionName(e.target.value)} /></div>
+            <div>
+              <label>{tr.binary}</label>
+              <p className="mt-1 text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 select-all">
+                {config?.agent_browser.binary || <span className="text-slate-400">{tr.not_detected}</span>}
+              </p>
+            </div>
+            <div>
+              <label>{tr.cdp_url}</label>
+              {cdpDisplay ? (
+                <p className="mt-1 text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 select-all font-mono">
+                  {cdpDisplay}
+                </p>
+              ) : (
+                <div className="mt-1 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <p className="text-amber-700">{tr.cdp_not_set}</p>
+                  <code className="text-xs text-amber-600 mt-1 block">agent-browser connect &lt;port|url&gt;</code>
+                </div>
+              )}
+            </div>
             <div><label>{tr.timeout}</label><input type="number" value={timeout} onChange={(e) => setTimeout_(e.target.value)} /></div>
           </div>
         </Card>
