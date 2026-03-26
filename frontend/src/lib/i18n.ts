@@ -2,8 +2,8 @@ type Lang = 'en' | 'zh';
 
 const dict = {
   nav: {
-    en: { console: 'Console', commands: 'Commands', mcp: 'MCP', docs: 'Docs', settings: 'Settings', logout: 'Logout', login: 'Login', setup_password: 'Setup Password' },
-    zh: { console: '控制台', commands: '命令', mcp: 'MCP', docs: '文档', settings: '设置', logout: '登出', login: '登录', setup_password: '设置密码' },
+    en: { console: 'Console', commands: 'Commands', mcp: 'MCP', skills: 'Skills', docs: 'Docs', settings: 'Settings', logout: 'Logout', login: 'Login', setup_password: 'Setup Password' },
+    zh: { console: '控制台', commands: '命令', mcp: 'MCP', skills: '技能', docs: '文档', settings: '设置', logout: '登出', login: '登录', setup_password: '设置密码' },
   },
   theme: {
     en: { light: 'Light', dark: 'Dark', auto: 'Auto' },
@@ -55,6 +55,10 @@ const dict = {
     en: { title: 'Docs', description: 'Shared source of truth for commands, MCP tools, and skills.', command: 'Command', category: 'Category', mode: 'Mode', summary: 'Summary', skills: 'Skills' },
     zh: { title: '文档', description: '命令、MCP 工具和技能的统一参考。', command: '命令', category: '分类', mode: '模式', summary: '摘要', skills: '技能' },
   },
+  skills: {
+    en: { skills_title: 'Skills', skills_description: 'Predefined multi-step workflows that chain commands together for complex tasks.' },
+    zh: { skills_title: '技能', skills_description: '将多个命令链接在一起执行复杂任务的预定义工作流。' },
+  },
   components: {
     en: { no_executions: 'No commands have been executed yet.', when: 'When', source: 'Source', command: 'Command', status: 'Status', summary_heading: 'Summary', just_now: 'just now', status_ok: 'ok', status_err: 'error', minutes_ago: 'm ago', hours_ago: 'h ago', days_ago: 'd ago' },
     zh: { no_executions: '尚无已执行的命令。', when: '时间', source: '来源', command: '命令', status: '状态', summary_heading: '摘要', just_now: '刚刚', status_ok: '成功', status_err: '错误', minutes_ago: '分钟前', hours_ago: '小时前', days_ago: '天前' },
@@ -75,6 +79,7 @@ export function t(lang: Lang) {
     mcp: dict.mcp[lang],
     settings: dict.settings[lang],
     docs: dict.docs[lang],
+    skills: dict.skills[lang],
     components: dict.components[lang],
   };
 }

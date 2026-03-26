@@ -44,6 +44,7 @@ export function Nav({ authenticated }: { authenticated: boolean }) {
               {navLink('/', tr.nav.console)}
               {navLink('/commands', tr.nav.commands)}
               {navLink('/mcp', tr.nav.mcp)}
+              {navLink('/skills', tr.nav.skills)}
               {navLink('/docs', tr.nav.docs)}
               {navLink('/settings', tr.nav.settings)}
             </>
