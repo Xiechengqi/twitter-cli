@@ -12,42 +12,52 @@
 
 - 独立 Rust CLI：`describe`、`execute`、`serve`
 - 本地 HTTP 服务
-- Web Console
+- Web Console（含 History 页面）
 - Docs 页面
-- MCP 工具暴露
-- Skill catalog
+- MCP 工具暴露（28 个工具）
+- Skill catalog（3 个技能）
 - 统一 manifest / describe 输出
 - 共享密码认证模型
 - `agent-browser` 绑定层
 - 执行历史记录
+- Wave 1-4 命令全部实现（28 个命令）
 
 ## 已实现命令
 
-只读命令：
+只读命令（Wave 1-4）：
 
-- `profile`
-- `timeline`
-- `trending`
-- `bookmarks`
-- `search`
-- `followers`
-- `followings`
+- `profile` - 获取用户资料
+- `timeline` - 获取时间线（for-you/following）
+- `trending` - 获取热门话题
+- `bookmarks` - 获取书签列表
+- `search` - 搜索推文
+- `followers` - 获取粉丝列表
+- `followings` - 获取关注列表
+- `likes` - 获取点赞列表
+- `notifications` - 获取通知
+- `article` - 读取推文长文章
+- `download` - 提取媒体 URL
+- `tweet` - 获取单条推文详情
+- `replies` - 获取推文回复
 
-写命令：
+写命令（Wave 2-4）：
 
-- `like`
-- `unlike`
-- `bookmark`
-- `unbookmark`
-- `follow`
-- `unfollow`
-- `post`
-- `reply`
-- `thread`
-- `delete`
+- `like` / `unlike` - 点赞/取消点赞
+- `bookmark` / `unbookmark` - 书签/取消书签
+- `follow` / `unfollow` - 关注/取消关注
+- `retweet` - 转发
+- `post` - 发推文
+- `reply` - 回复推文
+- `thread` - 发推文串
+- `delete` - 删除推文
+- `block` / `unblock` - 拉黑/取消拉黑
+- `hide_reply` - 隐藏回复
+- `accept_dm` - 批量接受 DM 请求（支持多关键词 OR 匹配）
+- `reply_dm` - 批量发送 DM
 
 ## 已实现 MCP Tools
 
+只读工具：
 - `twitter_profile`
 - `twitter_timeline`
 - `twitter_trending`
@@ -55,16 +65,26 @@
 - `twitter_followers`
 - `twitter_followings`
 - `twitter_bookmarks`
-- `twitter_like`
-- `twitter_unlike`
-- `twitter_bookmark`
-- `twitter_unbookmark`
-- `twitter_follow`
-- `twitter_unfollow`
+- `twitter_likes`
+- `twitter_notifications`
+- `twitter_article`
+- `twitter_download`
+- `twitter_tweet`
+- `twitter_replies`
+
+写操作工具：
+- `twitter_like` / `twitter_unlike`
+- `twitter_bookmark` / `twitter_unbookmark`
+- `twitter_follow` / `twitter_unfollow`
+- `twitter_retweet`
 - `twitter_post`
 - `twitter_reply`
 - `twitter_thread`
 - `twitter_delete`
+- `twitter_block` / `twitter_unblock`
+- `twitter_hide_reply`
+- `twitter_accept_dm`
+- `twitter_reply_dm`
 
 ## 已实现 Skills
 
