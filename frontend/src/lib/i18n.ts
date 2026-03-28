@@ -2,8 +2,8 @@ type Lang = 'en' | 'zh';
 
 const dict = {
   nav: {
-    en: { console: 'Console', commands: 'Commands', mcp: 'MCP', skills: 'Skills', docs: 'Docs', settings: 'Settings', logout: 'Logout', login: 'Login', setup_password: 'Setup Password' },
-    zh: { console: '控制台', commands: '命令', mcp: 'MCP', skills: '技能', docs: '文档', settings: '设置', logout: '登出', login: '登录', setup_password: '设置密码' },
+    en: { console: 'Console', commands: 'Commands', mcp: 'MCP', skills: 'Skills', docs: 'Docs', settings: 'Settings', history: 'History', logout: 'Logout', login: 'Login', setup_password: 'Setup Password' },
+    zh: { console: '控制台', commands: '命令', mcp: 'MCP', skills: '技能', docs: '文档', settings: '设置', history: '历史', logout: '登出', login: '登录', setup_password: '设置密码' },
   },
   theme: {
     en: { light: 'Light', dark: 'Dark', auto: 'Auto' },
@@ -20,6 +20,14 @@ const dict = {
       vnc_preview: 'Embedded preview from ', vnc_not_configured: 'VNC is not configured or embedding is disabled.',
       dt_api: 'API', dt_docs: 'Docs', dt_config: 'Config', dt_binary: 'Binary', dt_cdp_url: 'CDP URL',
       binary_not_set: 'Not installed. Install from', cdp_not_set: 'Not configured. Run:',
+      claude_code_title: 'Add to Claude Code',
+      claude_code_subtitle: 'One command to register twitter-cli as a Claude Code MCP server — gives Claude access to all Twitter commands.',
+      claude_code_step1: 'Copy the command below and run it in your terminal:',
+      claude_code_replace: 'Replace <PASSWORD> with your console password. Restart Claude Code after adding.',
+      claude_code_badge: 'MCP Integration',
+      claude_code_auth_title: 'Authentication',
+      claude_code_auth_desc: 'Use the Console password as the Bearer token. Go to Settings to change it.',
+      copy: 'Copy', copied: 'Copied!',
     },
     zh: {
       title: '控制台', tagline: '基于 ', tagline_suffix: ' 的本地 Twitter 自动化控制面板。',
@@ -31,6 +39,14 @@ const dict = {
       vnc_preview: '嵌入预览来自 ', vnc_not_configured: 'VNC 未配置或嵌入已禁用。',
       dt_api: 'API', dt_docs: '文档', dt_config: '配置', dt_binary: '可执行文件', dt_cdp_url: 'CDP URL',
       binary_not_set: '未安装，从以下地址安装', cdp_not_set: '未配置，请执行：',
+      claude_code_title: '添加到 Claude Code',
+      claude_code_subtitle: '一条命令将 twitter-cli 注册为 Claude Code MCP server — 让 Claude 访问所有 Twitter 命令。',
+      claude_code_step1: '复制以下命令并在终端运行：',
+      claude_code_replace: '将 <PASSWORD> 替换为控制台密码。添加后重启 Claude Code 生效。',
+      claude_code_badge: 'MCP 集成',
+      claude_code_auth_title: '认证方式',
+      claude_code_auth_desc: '使用控制台密码作为 Bearer token。前往设置页面可以修改密码。',
+      copy: '复制', copied: '已复制！',
     },
   },
   login: {
@@ -65,6 +81,10 @@ const dict = {
     en: { no_executions: 'No commands have been executed yet.', when: 'When', source: 'Source', command: 'Command', status: 'Status', summary_heading: 'Summary', just_now: 'just now', status_ok: 'ok', status_err: 'error', minutes_ago: 'm ago', hours_ago: 'h ago', days_ago: 'd ago' },
     zh: { no_executions: '尚无已执行的命令。', when: '时间', source: '来源', command: '命令', status: '状态', summary_heading: '摘要', just_now: '刚刚', status_ok: '成功', status_err: '错误', minutes_ago: '分钟前', hours_ago: '小时前', days_ago: '天前' },
   },
+  history: {
+    en: { title: 'Execution History', description: 'Full log of all command executions across CLI, API, and MCP.' },
+    zh: { title: '执行历史', description: '所有通过 CLI、API 和 MCP 执行的命令完整记录。' },
+  },
 } as const;
 
 export type Translations = typeof dict;
@@ -83,6 +103,7 @@ export function t(lang: Lang) {
     docs: dict.docs[lang],
     skills: dict.skills[lang],
     components: dict.components[lang],
+    history: dict.history[lang],
   };
 }
 

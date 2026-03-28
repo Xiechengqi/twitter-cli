@@ -4,23 +4,9 @@ use serde_json::{Value, json};
 use crate::agent_browser::client::AgentBrowserClient;
 use crate::errors::{AppError, AppResult};
 use crate::models::Account;
-use crate::twitter::extract::normalize_username;
+use crate::twitter::extract::{detect_username, normalize_username};
+use crate::twitter::features::PROFILE_FEATURES;
 use crate::twitter::query_ids::user_by_screen_name_fallback;
-
-const PROFILE_FEATURES: &str = r#"{
-  "hidden_profile_subscriptions_enabled": true,
-  "rweb_tipjar_consumption_enabled": true,
-  "responsive_web_graphql_exclude_directive_enabled": true,
-  "verified_phone_label_enabled": false,
-  "subscriptions_verification_info_is_identity_verified_enabled": true,
-  "subscriptions_verification_info_verified_since_enabled": true,
-  "highlights_tweets_tab_ui_enabled": true,
-  "responsive_web_twitter_article_notes_tab_enabled": true,
-  "subscriptions_feature_can_gift_premium": true,
-  "creator_subscriptions_tweet_preview_api_enabled": true,
-  "responsive_web_graphql_skip_user_profile_image_extensions_enabled": false,
-  "responsive_web_graphql_timeline_navigation_enabled": true
-}"#;
 
 #[derive(Debug, Deserialize)]
 struct ProfilePayload {
@@ -39,18 +25,7 @@ pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<V
     if username.is_empty() {
         client.open("https://x.com/home").await?;
         client.wait_ms(3_000).await?;
-        let detected: String = client
-            .eval_json(
-                r#"JSON.stringify((() => {
-                    const link = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
-                    return link ? (link.getAttribute('href') || '').replace(/^\//, '') : '';
-                })())"#,
-            )
-            .await?;
-        username = normalize_username(&detected);
-        if username.is_empty() {
-            return Err(AppError::TwitterLoginRequired);
-        }
+        username = detect_username(client).await?;
     }
 
     client.open(&format!("https://x.com/{username}")).await?;

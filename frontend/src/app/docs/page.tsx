@@ -55,45 +55,20 @@ export default function DocsPage() {
           </h2>
           <div className="space-y-4 text-sm">
             <div>
-              <h3 className="font-semibold text-slate-700 mb-2">{lang === 'zh' ? '配置 MCP Server' : 'Configure MCP Server'}</h3>
+              <h3 className="font-semibold text-slate-700 mb-2">{lang === 'zh' ? '添加 MCP Server' : 'Add MCP Server'}</h3>
               <p className="text-slate-500 mb-2">
                 {lang === 'zh'
-                  ? '在 Claude Code 设置中添加 MCP server，连接 twitter-cli 作为 AI 工具：'
-                  : 'Add twitter-cli as an MCP server in Claude Code settings to use Twitter commands as AI tools:'}
+                  ? '在终端运行以下命令，将 twitter-cli 注册为 Claude Code 的 MCP server：'
+                  : 'Run the following command in your terminal to register twitter-cli as a Claude Code MCP server:'}
               </p>
-              <pre className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs overflow-x-auto">
-{`# ~/.claude/settings.json or project .mcp.json
-{
-  "mcpServers": {
-    "twitter-cli": {
-      "command": "curl",
-      "args": [
-        "-X", "POST",
-        "${baseUrl}/mcp",
-        "-H", "Content-Type: application/json",
-        "-H", "Authorization: Bearer <PASSWORD>",
-        "-d", '{"jsonrpc":"2.0","id":"1","method":"tools/list","params":{}}'
-      ]
-    }
-  }
-}`}
+              <pre className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs overflow-x-auto whitespace-pre-wrap break-all">
+{`claude mcp add --transport http --header "Authorization: Bearer <PASSWORD>" --scope user twitter-cli ${baseUrl}/mcp`}
               </pre>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-slate-700 mb-2">Claude Code Settings.json</h3>
-              <pre className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs overflow-x-auto">
-{`{
-  "mcpServers": {
-    "twitter-cli": {
-      "url": "${baseUrl}/mcp",
-      "headers": {
-        "Authorization": "Bearer <PASSWORD>"
-      }
-    }
-  }
-}`}
-              </pre>
+              <p className="text-slate-400 text-xs mt-2">
+                {lang === 'zh'
+                  ? '将 <PASSWORD> 替换为控制台密码。添加后重启 Claude Code 生效。'
+                  : 'Replace <PASSWORD> with your console password. Restart Claude Code after adding.'}
+              </p>
             </div>
 
             <div className="bg-brand-50 rounded-lg p-4">

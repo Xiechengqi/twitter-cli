@@ -2,16 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Terminal, Wrench, Settings } from 'lucide-react';
+import { ArrowRight, Terminal, Wrench, Settings, Copy, Check, Sparkles } from 'lucide-react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
 import { StatusDot } from '@/components/status-dot';
-import { ExecutionTable } from '@/components/execution-table';
 import { Spinner } from '@/components/spinner';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
-import type { AppConfig, ExecutionRecord } from '@/lib/types';
+import type { AppConfig } from '@/lib/types';
 
 function extractCdpHost(url: string): string {
   try {
@@ -22,11 +21,30 @@ function extractCdpHost(url: string): string {
   }
 }
 
+function CopyButton({ text, label, copiedLabel }: { text: string; label: string; copiedLabel: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-white/80 hover:bg-white text-brand-600 border border-brand-200 hover:border-brand-300 hover:shadow-sm"
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? copiedLabel : label}
+    </button>
+  );
+}
+
 export default function HomePage() {
   const { lang } = useLang();
   const tr = t(lang).home;
   const [config, setConfig] = useState<AppConfig | null>(null);
-  const [records, setRecords] = useState<ExecutionRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,9 +55,8 @@ export default function HomePage() {
           window.location.href = '/setup/password';
           return;
         }
-        const [cfgRes, histRes] = await Promise.all([api.getConfig(), api.getHistory()]);
+        const cfgRes = await api.getConfig();
         setConfig(cfgRes.data);
-        setRecords(histRes.data);
       } catch {
         // 401 handled by api wrapper
       } finally {
@@ -60,11 +77,13 @@ export default function HomePage() {
   }
 
   const baseUrl = config ? `http://${config.server.host}:${config.server.port}` : '';
+  const mcpCommand = `claude mcp add --transport http --header "Authorization: Bearer <PASSWORD>" --scope user twitter-cli ${baseUrl}/mcp`;
 
   return (
     <>
       <Nav authenticated />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+        {/* Hero */}
         <div className="mb-12 text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight gradient-text mb-4">
             twitter-cli
@@ -74,7 +93,51 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        {/* Claude Code Integration — Hero CTA */}
+        <div className="relative mb-12 rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-600 to-violet-600 p-[1px]">
+          <div className="relative rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-8 sm:p-10">
+            {/* Badge */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs font-bold shadow-[0_4px_14px_0_rgba(79,70,229,0.3)]">
+                <Sparkles className="h-3.5 w-3.5" />
+                {tr.claude_code_badge}
+              </span>
+            </div>
+
+            {/* Heading */}
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">
+              {tr.claude_code_title}
+            </h2>
+            <p className="text-slate-500 mb-6 max-w-2xl">
+              {tr.claude_code_subtitle}
+            </p>
+
+            {/* Command block */}
+            <div className="mb-4">
+              <p className="text-sm font-medium text-slate-600 mb-2">{tr.claude_code_step1}</p>
+              <div className="relative group">
+                <pre className="bg-slate-900 text-slate-100 rounded-xl p-4 pr-24 text-sm overflow-x-auto font-mono leading-relaxed">
+                  {mcpCommand}
+                </pre>
+                <div className="absolute top-3 right-3">
+                  <CopyButton text={mcpCommand} label={tr.copy} copiedLabel={tr.copied} />
+                </div>
+              </div>
+              <p className="text-slate-400 text-xs mt-2">
+                {tr.claude_code_replace}
+              </p>
+            </div>
+
+            {/* Auth info */}
+            <div className="bg-brand-50/60 rounded-xl p-4 border border-brand-100">
+              <h3 className="font-semibold text-brand-700 text-sm mb-1">{tr.claude_code_auth_title}</h3>
+              <p className="text-slate-600 text-xs">{tr.claude_code_auth_desc}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Service Status */}
           <Card>
             <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.service_status}</h2>
@@ -133,12 +196,6 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
-          </Card>
-
-          {/* Recent Executions */}
-          <Card>
-            <h2 className="text-lg font-bold text-slate-900 mb-4">{tr.recent_executions}</h2>
-            <ExecutionTable records={records} />
           </Card>
         </div>
       </main>

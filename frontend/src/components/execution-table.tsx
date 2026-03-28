@@ -15,7 +15,7 @@ function formatTimestamp(epoch: number, lang: 'en' | 'zh'): string {
   return `${Math.floor(diff / 86400)}${tr.days_ago}`;
 }
 
-export function ExecutionTable({ records }: { records: ExecutionRecord[] }) {
+export function ExecutionTable({ records, showAll = false }: { records: ExecutionRecord[]; showAll?: boolean }) {
   const { lang } = useLang();
   const tr = t(lang).components;
 
@@ -23,7 +23,7 @@ export function ExecutionTable({ records }: { records: ExecutionRecord[] }) {
     return <p className="text-sm text-slate-500">{tr.no_executions}</p>;
   }
 
-  const recent = records.slice(-6).reverse();
+  const displayed = showAll ? records : records.slice(-6).reverse();
 
   return (
     <div className="overflow-x-auto">
@@ -38,7 +38,7 @@ export function ExecutionTable({ records }: { records: ExecutionRecord[] }) {
           </tr>
         </thead>
         <tbody>
-          {recent.map((r, i) => (
+          {displayed.map((r, i) => (
             <tr
               key={i}
               className="border-b border-slate-100 last:border-0"
@@ -58,7 +58,7 @@ export function ExecutionTable({ records }: { records: ExecutionRecord[] }) {
                   </span>
                 </span>
               </td>
-              <td className="py-2 text-slate-600 truncate max-w-[200px]">
+              <td className="py-2 text-slate-600 max-w-[400px] break-words whitespace-pre-wrap">
                 {r.summary}
               </td>
             </tr>

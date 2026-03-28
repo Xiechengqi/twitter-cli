@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 
 use crate::agent_browser::client::AgentBrowserClient;
 use crate::errors::{AppError, AppResult};
-use crate::twitter::extract::normalize_username;
+use crate::twitter::extract::{detect_username, normalize_username};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PersonItem {
@@ -49,18 +49,7 @@ async fn execute_people(
     if username.is_empty() {
         client.open("https://x.com/home").await?;
         client.wait_ms(3_000).await?;
-        let detected: String = client
-            .eval_json(
-                r#"JSON.stringify((() => {
-                    const link = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
-                    return link ? (link.getAttribute('href') || '').replace(/^\//, '') : '';
-                })())"#,
-            )
-            .await?;
-        username = normalize_username(&detected);
-        if username.is_empty() {
-            return Err(AppError::TwitterLoginRequired);
-        }
+        username = detect_username(client).await?;
     }
 
     client

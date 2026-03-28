@@ -3,12 +3,14 @@ use serde_json::{Value, json};
 
 use crate::agent_browser::client::AgentBrowserClient;
 use crate::errors::{AppError, AppResult};
-use crate::twitter::features::TWEET_FEATURES;
+use crate::twitter::extract::{detect_username, normalize_username};
+use crate::twitter::features::{PROFILE_FEATURES, TWEET_FEATURES};
+use crate::twitter::query_ids::user_by_screen_name_fallback;
 
-const BOOKMARKS_QUERY_ID: &str = "Fy0QMy4q_aZCpkO0PnyLYw";
+const LIKES_FALLBACK_QUERY_ID: &str = "eSSNbhECHHBBgt0YSLnBRA";
 
 #[derive(Debug, Serialize, Deserialize)]
-struct BookmarkTweet {
+struct LikeTweet {
     id: String,
     author: String,
     name: String,
@@ -20,13 +22,19 @@ struct BookmarkTweet {
 }
 
 #[derive(Debug, Deserialize)]
-struct BookmarksPayload {
+struct LikesPayload {
     error: Option<String>,
-    tweets: Option<Vec<BookmarkTweet>>,
+    tweets: Option<Vec<LikeTweet>>,
 }
 
 pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<Value> {
+    let mut username = params
+        .get("username")
+        .and_then(Value::as_str)
+        .map(normalize_username)
+        .unwrap_or_default();
     let limit = params.get("limit").and_then(Value::as_u64).unwrap_or(20);
+
     if limit == 0 {
         return Err(AppError::InvalidParams(
             "`limit` must be greater than 0".to_string(),
@@ -36,6 +44,10 @@ pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<V
     client.open("https://x.com").await?;
     client.wait_ms(3_000).await?;
 
+    if username.is_empty() {
+        username = detect_username(client).await?;
+    }
+
     let script = format!(
         r#"(async () => {{
           const ct0 = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('ct0='))?.split('=')[1] || null;
@@ -43,15 +55,18 @@ pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<V
             return JSON.stringify({{ error: 'Not logged into x.com (no ct0 cookie)' }});
           }}
 
-          async function resolveQueryId(fallbackId) {{
-            try {{
-              const ghResp = await fetch('https://raw.githubusercontent.com/fa0311/twitter-openapi/refs/heads/main/src/config/placeholder.json');
-              if (ghResp.ok) {{
-                const data = await ghResp.json();
-                const entry = data['Bookmarks'];
-                if (entry && entry.queryId) return entry.queryId;
-              }}
-            }} catch {{}}
+          // Fetch GitHub lookup table once, reuse for both query ID resolutions
+          let ghLookup = null;
+          try {{
+            const ghResp = await fetch('https://raw.githubusercontent.com/fa0311/twitter-openapi/refs/heads/main/src/config/placeholder.json');
+            if (ghResp.ok) ghLookup = await ghResp.json();
+          }} catch {{}}
+
+          async function resolveQueryId(operationName, fallbackId) {{
+            if (ghLookup) {{
+              const entry = ghLookup[operationName];
+              if (entry && entry.queryId) return entry.queryId;
+            }}
             try {{
               const scripts = performance.getEntriesByType('resource')
                 .filter(r => r.name.includes('client-web') && r.name.endsWith('.js'))
@@ -59,7 +74,8 @@ pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<V
               for (const scriptUrl of scripts.slice(0, 15)) {{
                 try {{
                   const text = await (await fetch(scriptUrl)).text();
-                  const match = text.match(/queryId:"([A-Za-z0-9_-]+)"[^}}]{{0,200}}operationName:"Bookmarks"/);
+                  const re = new RegExp('queryId:"([A-Za-z0-9_-]+)"[^}}]{{0,200}}operationName:"' + operationName + '"');
+                  const match = text.match(re);
                   if (match) return match[1];
                 }} catch {{}}
               }}
@@ -91,12 +107,12 @@ pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<V
             }};
           }}
 
-          function parseBookmarks(data, seen) {{
+          function parseLikes(data, seen) {{
             const tweets = [];
             let nextCursor = null;
             const instructions =
-              data?.data?.bookmark_timeline_v2?.timeline?.instructions ||
-              data?.data?.bookmark_timeline?.timeline?.instructions ||
+              data?.data?.user?.result?.timeline_v2?.timeline?.instructions ||
+              data?.data?.user?.result?.timeline?.timeline?.instructions ||
               [];
 
             for (const inst of instructions) {{
@@ -127,13 +143,34 @@ pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<V
             return {{ tweets, nextCursor }};
           }}
 
-          const queryId = await resolveQueryId({fallback_query_id:?});
+          // Resolve user ID first
+          const profileQueryId = await resolveQueryId('UserByScreenName', {profile_fallback:?});
+          const profileVars = JSON.stringify({{
+            screen_name: {username:?},
+            withSafetyModeUserFields: true,
+          }});
+          const profileUrl = '/i/api/graphql/' + profileQueryId + '/UserByScreenName?variables='
+            + encodeURIComponent(profileVars)
+            + '&features=' + encodeURIComponent(JSON.stringify({profile_features}));
+
           const headers = {{
             Authorization: 'Bearer ' + decodeURIComponent('AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA'),
             'X-Csrf-Token': ct0,
             'X-Twitter-Auth-Type': 'OAuth2Session',
             'X-Twitter-Active-User': 'yes',
           }};
+
+          const profileResp = await fetch(profileUrl, {{ headers, credentials: 'include' }});
+          if (!profileResp.ok) {{
+            return JSON.stringify({{ error: 'HTTP ' + profileResp.status + ': Failed to resolve user.' }});
+          }}
+          const profileData = await profileResp.json();
+          const userId = profileData?.data?.user?.result?.rest_id;
+          if (!userId) {{
+            return JSON.stringify({{ error: 'Could not resolve user ID for @' + {username:?} }});
+          }}
+
+          const queryId = await resolveQueryId('Likes', {fallback_query_id:?});
 
           const allTweets = [];
           const seen = new Set();
@@ -142,12 +179,13 @@ pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<V
           for (let i = 0; i < 5 && allTweets.length < {limit}; i++) {{
             const fetchCount = Math.min(100, {limit} - allTweets.length + 10);
             const variables = {{
+              userId: userId,
               count: fetchCount,
               includePromotedContent: false,
             }};
             if (cursor) variables.cursor = cursor;
 
-            const apiUrl = '/i/api/graphql/' + queryId + '/Bookmarks?variables='
+            const apiUrl = '/i/api/graphql/' + queryId + '/Likes?variables='
               + encodeURIComponent(JSON.stringify(variables))
               + '&features=' + encodeURIComponent(JSON.stringify({features}));
 
@@ -158,12 +196,12 @@ pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<V
 
             if (!response.ok) {{
               return JSON.stringify({{
-                error: 'HTTP ' + response.status + ': Failed to fetch bookmarks. queryId may have expired.'
+                error: 'HTTP ' + response.status + ': Failed to fetch likes. queryId may have expired.'
               }});
             }}
 
             const data = await response.json();
-            const parsed = parseBookmarks(data, seen);
+            const parsed = parseLikes(data, seen);
             allTweets.push(...parsed.tweets);
             if (!parsed.nextCursor || parsed.nextCursor === cursor) break;
             cursor = parsed.nextCursor;
@@ -171,12 +209,15 @@ pub async fn execute(client: &AgentBrowserClient, params: &Value) -> AppResult<V
 
           return JSON.stringify({{ tweets: allTweets.slice(0, {limit}) }});
         }})()"#,
-        fallback_query_id = BOOKMARKS_QUERY_ID,
+        profile_fallback = user_by_screen_name_fallback(),
+        username = username,
+        profile_features = PROFILE_FEATURES,
+        fallback_query_id = LIKES_FALLBACK_QUERY_ID,
         limit = limit,
         features = TWEET_FEATURES,
     );
 
-    let payload: BookmarksPayload = client.eval_json(&script).await?;
+    let payload: LikesPayload = client.eval_json(&script).await?;
     if let Some(error) = payload.error {
         if error.contains("ct0 cookie") {
             return Err(AppError::TwitterLoginRequired);

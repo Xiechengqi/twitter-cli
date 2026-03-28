@@ -1,7 +1,13 @@
 pub mod actions;
+pub mod article;
 pub mod bookmarks;
+pub mod download;
+pub mod likes;
+pub mod notifications;
 pub mod people;
 pub mod profile;
+pub mod replies;
 pub mod search;
 pub mod timeline;
 pub mod trending;
+pub mod tweet;

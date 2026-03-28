@@ -274,7 +274,7 @@ struct McpRequest {
     id: Option<Value>,
     method: Option<String>,
     #[serde(default)]
-    params: Option<McpToolCall>,
+    params: Option<Value>,
     tool: Option<String>,
     #[serde(default)]
     arguments: Option<Value>,
@@ -311,7 +311,8 @@ async fn call_mcp(
                         "tools": {
                             "listChanged": false
                         }
-                    }
+                    },
+                    "instructions": "twitter-cli controls a shared browser session via agent-browser. All tools share one browser instance, so you MUST call them sequentially — never invoke multiple twitter-cli tools in parallel. Wait for each call to complete before starting the next one."
                 }
             }));
         }
@@ -359,17 +360,25 @@ async fn call_mcp(
             }));
         }
         Some("tools/call") => {
-            let params = payload
-                .params
-                .ok_or_else(|| AppError::InvalidParams("params is required".to_string()));
-            let params = match params {
-                Ok(params) => params,
-                Err(error) => {
+            let params_val = match payload.params {
+                Some(v) => v,
+                None => {
                     return Json(mcp_error_response(
                         payload.id,
                         -32602,
-                        error.to_string(),
-                        Some(error.code().to_string()),
+                        "params is required",
+                        Some("INVALID_PARAMS".to_string()),
+                    ));
+                }
+            };
+            let params: McpToolCall = match serde_json::from_value(params_val) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Json(mcp_error_response(
+                        payload.id,
+                        -32602,
+                        format!("invalid params: {e}"),
+                        Some("INVALID_PARAMS".to_string()),
                     ));
                 }
             };
@@ -430,6 +439,13 @@ async fn call_mcp(
 
     let formatted_result =
         serde_json::to_string_pretty(&result).unwrap_or_else(|_| "null".to_string());
+
+    let structured = match &result {
+        Value::Array(_) => json!({ "results": result }),
+        Value::Object(_) => result.clone(),
+        _ => json!({ "value": result }),
+    };
+
     Json(json!({
         "jsonrpc": "2.0",
         "id": payload.id,
@@ -437,8 +453,8 @@ async fn call_mcp(
             "tool": spec.name,
             "command": spec.command,
             "ok": true,
-            "data": result.clone(),
-            "structuredContent": result,
+            "data": result,
+            "structuredContent": structured,
             "content": [{
                 "type": "text",
                 "text": formatted_result
@@ -489,7 +505,41 @@ async fn push_history(state: &Arc<AppState>, entry: ExecutionRecord) {
 
 fn summarize_success(result: &Value) -> String {
     match result {
-        Value::Array(items) => format!("{} item(s)", items.len()),
+        Value::Array(items) => {
+            if items.is_empty() {
+                return "0 item(s)".to_string();
+            }
+            // Try to extract meaningful content from the first item
+            if let Some(first) = items.first().and_then(Value::as_object) {
+                // Prefer text > content > title > summary > message > name > author
+                for key in &[
+                    "text",
+                    "content",
+                    "title",
+                    "summary",
+                    "message",
+                    "name",
+                    "author",
+                ] {
+                    if let Some(value) = first.get(*key).and_then(Value::as_str) {
+                        let trimmed = value.trim();
+                        if !trimmed.is_empty() {
+                            let preview = if trimmed.len() > 80 {
+                                format!("{}…", &trimmed[..trimmed.floor_char_boundary(80)])
+                            } else {
+                                trimmed.to_string()
+                            };
+                            return if items.len() == 1 {
+                                preview
+                            } else {
+                                format!("{} (+{} more)", preview, items.len() - 1)
+                            };
+                        }
+                    }
+                }
+            }
+            format!("{} item(s)", items.len())
+        }
         Value::Object(map) => {
             if let Some(message) = map.get("message").and_then(Value::as_str) {
                 message.to_string()
