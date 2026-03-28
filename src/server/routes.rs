@@ -525,7 +525,11 @@ fn summarize_success(result: &Value) -> String {
                         let trimmed = value.trim();
                         if !trimmed.is_empty() {
                             let preview = if trimmed.len() > 80 {
-                                format!("{}…", &trimmed[..trimmed.floor_char_boundary(80)])
+                                let mut end = 80.min(trimmed.len());
+                                while end > 0 && !trimmed.is_char_boundary(end) {
+                                    end -= 1;
+                                }
+                                format!("{}…", &trimmed[..end])
                             } else {
                                 trimmed.to_string()
                             };
