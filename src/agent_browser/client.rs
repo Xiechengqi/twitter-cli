@@ -23,6 +23,7 @@ impl AgentBrowserClient {
     pub async fn run(&self, args: &[&str]) -> AppResult<AgentBrowserResponse> {
         let mut command = Command::new(&self.options.binary);
         command.arg("--json");
+        command.arg("--cdp").arg(&self.options.cdp_port);
         command
             .arg("--session-name")
             .arg(&self.options.session_name);

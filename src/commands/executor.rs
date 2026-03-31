@@ -31,14 +31,15 @@ impl CommandExecutor {
             .get(command_name)
             .ok_or_else(|| AppError::CommandNotFound(command_name.to_string()))?;
 
-        if config.agent_browser.cdp_url.is_empty() {
+        if config.agent_browser.cdp_port.is_empty() {
             return Err(AppError::InvalidParams(
-                "agent_browser.cdp_url is required".to_string(),
+                "agent_browser.cdp_port is required — set the CDP port in Settings".to_string(),
             ));
         }
 
         let client = AgentBrowserClient::new(AgentBrowserOptions {
             binary: config.agent_browser.binary.clone(),
+            cdp_port: config.agent_browser.cdp_port.clone(),
             session_name: config.agent_browser.session_name.clone(),
             timeout_secs: config.agent_browser.timeout_secs,
         });

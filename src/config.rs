@@ -23,7 +23,7 @@ pub struct AuthConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentBrowserConfig {
     pub binary: String,
-    pub cdp_url: String,
+    pub cdp_port: String,
     pub session_name: String,
     #[serde(default = "default_timeout_secs")]
     pub timeout_secs: u64,
@@ -62,7 +62,7 @@ impl Default for AppConfig {
             },
             agent_browser: AgentBrowserConfig {
                 binary: "agent-browser".to_string(),
-                cdp_url: String::new(),
+                cdp_port: String::new(),
                 session_name: "twitter-cli".to_string(),
                 timeout_secs: 60,
             },
@@ -110,45 +110,6 @@ pub async fn detect_agent_browser_binary() -> String {
     }
 }
 
-/// Run `agent-browser get cdp-url` and extract the base URL (scheme + host + port).
-/// e.g. `ws://127.0.0.1:12345/devtools/browser/abc` → `ws://127.0.0.1:12345`
-pub async fn detect_cdp_url(binary: &str) -> Option<String> {
-    let output = tokio::process::Command::new(binary)
-        .args(["get", "cdp-url"])
-        .output()
-        .await
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if raw.is_empty() {
-        return None;
-    }
-    // Extract base: ws://host:port
-    extract_cdp_base_url(&raw)
-}
-
-fn extract_cdp_base_url(url: &str) -> Option<String> {
-    // ws://127.0.0.1:12345/devtools/browser/... → ws://127.0.0.1:12345
-    let scheme_end = url.find("://")?;
-    let scheme = &url[..scheme_end];
-    let after_scheme = &url[scheme_end + 3..];
-    let host_port = match after_scheme.find('/') {
-        Some(i) => &after_scheme[..i],
-        None => after_scheme,
-    };
-    Some(format!("{scheme}://{host_port}"))
-}
-
-/// Run `agent-browser connect <cdp_url>` to reconnect to a new CDP endpoint.
-pub async fn reconnect_agent_browser(binary: &str, cdp_url: &str) {
-    let _ = tokio::process::Command::new(binary)
-        .args(["connect", cdp_url])
-        .output()
-        .await;
-}
-
 pub async fn load_or_init() -> AppResult<(AppConfig, PathBuf, bool)> {
     let path = config_path()?;
     if fs::try_exists(&path)
@@ -158,23 +119,13 @@ pub async fn load_or_init() -> AppResult<(AppConfig, PathBuf, bool)> {
         let raw = fs::read_to_string(&path)
             .await
             .map_err(|err| AppError::ConfigReadFailed(err.to_string()))?;
-        let mut config = toml::from_str::<AppConfig>(&raw)
+        let config = toml::from_str::<AppConfig>(&raw)
             .map_err(|err| AppError::ConfigReadFailed(err.to_string()))?;
-        // Auto-detect cdp_url if not configured
-        if config.agent_browser.cdp_url.is_empty() {
-            if let Some(url) = detect_cdp_url(&config.agent_browser.binary).await {
-                config.agent_browser.cdp_url = url;
-                let _ = save(&path, &config).await;
-            }
-        }
         return Ok((config, path, false));
     }
 
     let mut config = AppConfig::default();
     config.agent_browser.binary = detect_agent_browser_binary().await;
-    if let Some(url) = detect_cdp_url(&config.agent_browser.binary).await {
-        config.agent_browser.cdp_url = url;
-    }
     save(&path, &config).await?;
     Ok((config, path, true))
 }
@@ -215,7 +166,7 @@ pub async fn save(path: &Path, config: &AppConfig) -> AppResult<()> {
 mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use super::{AppConfig, extract_cdp_base_url, load_or_init};
+    use super::{AppConfig, load_or_init};
 
     #[tokio::test]
     async fn load_existing_config_does_not_mutate_localhost_host() {
@@ -238,7 +189,7 @@ password_changed = false
 
 [agent_browser]
 binary = "agent-browser"
-cdp_url = ""
+cdp_port = ""
 session_name = "twitter-cli"
 
 [vnc]
@@ -279,22 +230,5 @@ embed = true
         let config = AppConfig::default();
         assert_eq!(config.server.host, "0.0.0.0");
         assert_eq!(config.server.port, 12233);
-    }
-
-    #[test]
-    fn extract_cdp_base_url_strips_path() {
-        assert_eq!(
-            extract_cdp_base_url("ws://127.0.0.1:12345/devtools/browser/abc-123"),
-            Some("ws://127.0.0.1:12345".to_string()),
-        );
-        assert_eq!(
-            extract_cdp_base_url("wss://host:9222/devtools/page/1"),
-            Some("wss://host:9222".to_string()),
-        );
-        assert_eq!(
-            extract_cdp_base_url("ws://localhost:9222"),
-            Some("ws://localhost:9222".to_string()),
-        );
-        assert_eq!(extract_cdp_base_url("not-a-url"), None);
     }
 }

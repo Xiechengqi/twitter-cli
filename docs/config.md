@@ -28,7 +28,7 @@ password_changed = false
 
 [agent_browser]
 binary = "/usr/local/bin/agent-browser"
-cdp_url = ""
+cdp_port = ""
 session_name = "twitter-cli"
 
 [vnc]
@@ -64,8 +64,8 @@ embed = true
 
 - `binary`
   默认启动时通过 `which agent-browser` 自动探测
-- `cdp_url`
-  可为空；为空时使用默认 `agent-browser` 行为
+- `cdp_port`
+  必填；用户需在设置页填入 CDP 端口（如 `9222`），所有命令会自动附加 `--cdp <port>`
 - `session_name`
   默认 `twitter-cli`
 

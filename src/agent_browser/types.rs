@@ -4,6 +4,7 @@ use serde_json::Value;
 #[derive(Debug, Clone)]
 pub struct AgentBrowserOptions {
     pub binary: String,
+    pub cdp_port: String,
     pub session_name: String,
     pub timeout_secs: u64,
 }

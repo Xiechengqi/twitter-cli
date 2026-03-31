@@ -12,15 +12,6 @@ import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
 import type { AppConfig } from '@/lib/types';
 
-function extractCdpHost(url: string): string {
-  try {
-    const u = new URL(url.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:'));
-    return `${u.hostname}:${u.port}`;
-  } catch {
-    return url;
-  }
-}
-
 function CopyButton({ text, label, copiedLabel }: { text: string; label: string; copiedLabel: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -162,12 +153,12 @@ export default function HomePage() {
                 </dd>
               </div>
               <div>
-                <dt>{tr.dt_cdp_url}</dt>
+                <dt>{tr.dt_cdp_port}</dt>
                 <dd>
-                  <StatusDot ok={!!config?.agent_browser.cdp_url} />
-                  {config?.agent_browser.cdp_url
-                    ? <code>{extractCdpHost(config.agent_browser.cdp_url)}</code>
-                    : <span className="text-amber-600 text-xs">{tr.cdp_not_set} <code>agent-browser connect &lt;port|url&gt;</code></span>
+                  <StatusDot ok={!!config?.agent_browser.cdp_port} />
+                  {config?.agent_browser.cdp_port
+                    ? <code>{config.agent_browser.cdp_port}</code>
+                    : <span className="text-amber-600 text-xs">{tr.cdp_not_set}</span>
                   }
                 </dd>
               </div>
