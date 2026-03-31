@@ -1,4 +1,5 @@
 import type {
+  AccountEntry,
   ApiResponse,
   AppConfig,
   BootstrapInfo,
@@ -104,4 +105,24 @@ export async function changePassword(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ new_password: newPassword }),
   });
+}
+
+export async function getCdpPorts(): Promise<ApiResponse<{ ports: string[] }>> {
+  return request('/api/cdp-ports');
+}
+
+export async function updateCdpPorts(ports: string[]): Promise<ApiResponse<{ ports: string[] }>> {
+  return request('/api/cdp-ports', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ports }),
+  });
+}
+
+export async function refreshCdpPorts(): Promise<ApiResponse<{ triggered: boolean }>> {
+  return request('/api/cdp-ports/refresh', { method: 'POST' });
+}
+
+export async function getAccounts(): Promise<ApiResponse<AccountEntry[]>> {
+  return request('/api/accounts');
 }

@@ -73,7 +73,7 @@ pub struct AuthModelSpec {
 pub struct AgentBrowserSpec {
     pub binding: &'static str,
     pub binary_auto_detect: bool,
-    pub supports_cdp_port: bool,
+    pub multi_account: bool,
     pub default_session_name: &'static str,
 }
 
@@ -114,7 +114,7 @@ pub fn build_manifest(config_path: String, host: String, port: u16) -> DescribeM
         agent_browser: AgentBrowserSpec {
             binding: "cli",
             binary_auto_detect: true,
-            supports_cdp_port: true,
+            multi_account: true,
             default_session_name: "twitter-cli",
         },
         commands: command_specs(),

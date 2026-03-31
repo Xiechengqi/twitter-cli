@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Terminal, Wrench, Settings, Copy, Check, Sparkles } from 'lucide-react';
+import { ArrowRight, Terminal, Wrench, Settings, Copy, Check, Sparkles, MonitorSmartphone } from 'lucide-react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
 import { StatusDot } from '@/components/status-dot';
@@ -10,7 +10,7 @@ import { Spinner } from '@/components/spinner';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
-import type { AppConfig } from '@/lib/types';
+import type { AppConfig, BootstrapInfo } from '@/lib/types';
 
 function CopyButton({ text, label, copiedLabel }: { text: string; label: string; copiedLabel: string }) {
   const [copied, setCopied] = useState(false);
@@ -36,6 +36,7 @@ export default function HomePage() {
   const { lang } = useLang();
   const tr = t(lang).home;
   const [config, setConfig] = useState<AppConfig | null>(null);
+  const [bootstrap, setBootstrap] = useState<BootstrapInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function HomePage() {
           window.location.href = '/setup/password';
           return;
         }
+        setBootstrap(bs);
         const cfgRes = await api.getConfig();
         setConfig(cfgRes.data);
       } catch {
@@ -153,13 +155,24 @@ export default function HomePage() {
                 </dd>
               </div>
               <div>
-                <dt>{tr.dt_cdp_port}</dt>
-                <dd>
-                  <StatusDot ok={!!config?.agent_browser.cdp_port} />
-                  {config?.agent_browser.cdp_port
-                    ? <code>{config.agent_browser.cdp_port}</code>
-                    : <span className="text-amber-600 text-xs">{tr.cdp_not_set}</span>
-                  }
+                <dt>{tr.dt_cdp}</dt>
+                <dd className="flex items-center gap-2">
+                  {bootstrap?.cdp.ports.length === 0 ? (
+                    <span className="text-amber-600 text-xs">{tr.cdp_not_set}</span>
+                  ) : (
+                    <>
+                      <span className="text-xs">
+                        <StatusDot ok={(bootstrap?.cdp.online ?? 0) > 0} />
+                        <span className="text-emerald-600 font-medium">{bootstrap?.cdp.online}{tr.cdp_online}</span>
+                        {' · '}
+                        <span className="text-slate-500">{bootstrap?.cdp.offline}{tr.cdp_offline}</span>
+                      </span>
+                      <Link href="/cdp" className="text-xs text-brand-600 hover:underline font-medium ml-auto flex items-center gap-1">
+                        <MonitorSmartphone className="h-3 w-3" />
+                        {tr.cdp_manage}
+                      </Link>
+                    </>
+                  )}
                 </dd>
               </div>
             </dl>

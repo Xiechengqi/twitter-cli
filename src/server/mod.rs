@@ -12,6 +12,8 @@ use crate::auth::AuthState;
 use crate::commands::executor::CommandExecutor;
 use crate::commands::registry::CommandRegistry;
 use crate::config::{self, AppConfig};
+use crate::db::Db;
+use crate::discovery;
 use crate::errors::{AppError, AppResult};
 use crate::manifest::{DescribeManifest, build_manifest};
 
@@ -56,13 +58,15 @@ pub struct AppState {
     pub first_run: bool,
     pub manifest: DescribeManifest,
     pub runtime: Arc<RwLock<RuntimeState>>,
+    pub cdp_ports: Arc<RwLock<Vec<String>>>,
+    pub db: Db,
     pub executor: CommandExecutor,
 }
 
 pub async fn serve(
     host_override: Option<String>,
     port_override: Option<u16>,
-    cdp_port_override: Option<String>,
+    cdp_ports_arg: Vec<String>,
     password_override: Option<String>,
 ) -> AppResult<()> {
     let (mut config, path, first_run) = config::load_or_init().await?;
@@ -72,13 +76,36 @@ pub async fn serve(
     if let Some(port) = port_override {
         config.server.port = port;
     }
-    if let Some(cdp_port) = cdp_port_override {
-        config.agent_browser.cdp_port = cdp_port;
-    }
     if let Some(password) = password_override {
         config.auth.password = password;
         config.auth.password_changed = true;
     }
+
+    let db = Db::open()?;
+    let cdp_ports: Vec<String> = cdp_ports_arg
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect();
+    let cdp_ports_shared = Arc::new(RwLock::new(cdp_ports.clone()));
+
+    // Startup discovery: skip ports already cached as online in db
+    {
+        let binary = config.agent_browser.binary.clone();
+        let timeout = config.agent_browser.timeout_secs;
+        let db_clone = db.clone();
+        let ports = cdp_ports.clone();
+        tokio::spawn(async move {
+            discovery::discover(&db_clone, &binary, &ports, timeout, true).await;
+        });
+    }
+
+    // Periodic full discovery every hour
+    discovery::spawn_periodic(
+        db.clone(),
+        config.agent_browser.binary.clone(),
+        cdp_ports_shared.clone(),
+        config.agent_browser.timeout_secs,
+    );
 
     let auth_state = AuthState::from_config(&config);
     let host = config.server.host.clone();
@@ -90,6 +117,8 @@ pub async fn serve(
             auth_state,
             recent_executions: Vec::new(),
         })),
+        cdp_ports: cdp_ports_shared,
+        db,
         executor: CommandExecutor::new(CommandRegistry::new()),
         first_run,
     });

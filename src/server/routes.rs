@@ -3,13 +3,14 @@ use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, HeaderValue, header};
 use axum::response::{IntoResponse, Redirect};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post, put};
 use axum::{Json, Router};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use crate::auth::{AUTH_COOKIE_NAME, is_authenticated};
 use crate::config;
+use crate::discovery;
 use crate::errors::AppError;
 use crate::response::ApiResponse;
 use crate::server::{AppState, ExecutionRecord};
@@ -30,6 +31,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/skills", get(get_skills))
         .route("/api/password/change", post(change_password))
         .route("/api/execute/{command}", post(execute_command))
+        .route("/api/cdp-ports", get(get_cdp_ports).put(update_cdp_ports))
+        .route("/api/cdp-ports/refresh", post(refresh_cdp_ports))
+        .route("/api/accounts", get(get_accounts))
         .fallback(crate::embedded::serve_static)
         .with_state(state)
 }
@@ -40,6 +44,10 @@ async fn health() -> Json<Value> {
 
 async fn bootstrap(State(state): State<Arc<AppState>>) -> Json<Value> {
     let runtime = state.runtime.read().await;
+    let cdp_ports = state.cdp_ports.read().await;
+    let accounts = state.db.list_accounts().unwrap_or_default();
+    let online_count = accounts.iter().filter(|a| a.online).count();
+    let offline_count = accounts.len() - online_count;
     Json(json!({
         "first_run": state.first_run,
         "password_required": !runtime.config.auth.password.is_empty() && !runtime.config.auth.password_changed,
@@ -50,7 +58,11 @@ async fn bootstrap(State(state): State<Arc<AppState>>) -> Json<Value> {
         "agent_browser": {
             "binary": runtime.config.agent_browser.binary,
             "detected": runtime.config.agent_browser.binary != "agent-browser",
-            "cdp_port": runtime.config.agent_browser.cdp_port,
+        },
+        "cdp": {
+            "ports": *cdp_ports,
+            "online": online_count,
+            "offline": offline_count,
         },
         "vnc": {
             "configured": !runtime.config.vnc.url.is_empty(),
@@ -300,7 +312,7 @@ async fn call_mcp(
                             "listChanged": false
                         }
                     },
-                    "instructions": "twitter-cli controls a shared browser session via agent-browser. All tools share one browser instance, so you MUST call them sequentially — never invoke multiple twitter-cli tools in parallel. Wait for each call to complete before starting the next one."
+                    "instructions": "twitter-cli manages multiple Twitter accounts via browser sessions.\n\n1. Call `twitter_accounts` first to discover available accounts and their cdp_port values.\n2. Every subsequent tool call MUST include `cdp_port` to target the correct account.\n3. Tools sharing the same cdp_port MUST be called sequentially.\n4. Tools targeting different cdp_port values may run in parallel."
                 }
             }));
         }
@@ -332,19 +344,25 @@ async fn call_mcp(
 
     let (tool_name, arguments) = match payload.method.as_deref() {
         Some("tools/list") => {
+            let accounts_tool = json!({
+                "name": "twitter_accounts",
+                "description": "List all managed Twitter accounts and their CDP ports. Call this first to discover available accounts before executing any command.",
+                "inputSchema": { "type": "object", "properties": {} },
+                "annotations": { "readOnlyHint": true }
+            });
+            let mut tools: Vec<Value> = vec![accounts_tool];
+            tools.extend(state.manifest.mcp_tools.iter().map(|tool| json!({
+                "name": tool.name,
+                "description": format!("Maps to twitter-cli command `{}`", tool.command),
+                "inputSchema": build_mcp_input_schema(&state, tool.command),
+                "annotations": {
+                    "readOnlyHint": tool.read_only
+                }
+            })));
             return Json(json!({
                 "jsonrpc": "2.0",
                 "id": payload.id,
-                "result": {
-                    "tools": state.manifest.mcp_tools.iter().map(|tool| json!({
-                        "name": tool.name,
-                        "description": format!("Maps to twitter-cli command `{}`", tool.command),
-                        "inputSchema": build_mcp_input_schema(&state, tool.command),
-                        "annotations": {
-                            "readOnlyHint": tool.read_only
-                        }
-                    })).collect::<Vec<_>>()
-                }
+                "result": { "tools": tools }
             }));
         }
         Some("tools/call") => {
@@ -395,6 +413,24 @@ async fn call_mcp(
             (tool, payload.arguments.unwrap_or_else(|| json!({})))
         }
     };
+
+    // twitter_accounts is a built-in tool, not routed through the command executor
+    if tool_name == "twitter_accounts" {
+        let accounts = state.db.list_accounts().unwrap_or_default();
+        let result = serde_json::to_value(&accounts).unwrap_or(json!([]));
+        let formatted = serde_json::to_string_pretty(&result).unwrap_or_default();
+        return Json(json!({
+            "jsonrpc": "2.0",
+            "id": payload.id,
+            "result": {
+                "tool": "twitter_accounts",
+                "ok": true,
+                "data": result,
+                "structuredContent": { "results": result },
+                "content": [{ "type": "text", "text": formatted }]
+            }
+        }));
+    }
 
     let spec = match state
         .manifest
@@ -461,8 +497,9 @@ async fn execute_and_record(
         let runtime = state.runtime.read().await;
         runtime.config.clone()
     };
+    let managed_ports = state.cdp_ports.read().await.clone();
 
-    match state.executor.execute(command, params, &config).await {
+    match state.executor.execute(command, params, &config, &managed_ports).await {
         Ok(result) => {
             push_history(
                 state,
@@ -622,6 +659,95 @@ async fn require_auth(headers: &HeaderMap, state: &AppState) -> Result<(), AppEr
         .ok_or(AppError::AuthRequired)
 }
 
+// ── CDP Ports ────────────────────────────────────────────────────────────────
+
+async fn get_cdp_ports(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+    let ports = state.cdp_ports.read().await.clone();
+    Ok(Json(ApiResponse::success(json!(ports), None)))
+}
+
+#[derive(Deserialize)]
+struct UpdateCdpPortsRequest {
+    ports: Vec<String>,
+}
+
+async fn update_cdp_ports(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<UpdateCdpPortsRequest>,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+
+    let new_ports: Vec<String> = payload
+        .ports
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let (added, _removed) = {
+        let current = state.cdp_ports.read().await;
+        let added: Vec<String> = new_ports
+            .iter()
+            .filter(|p| !current.contains(p))
+            .cloned()
+            .collect();
+        let removed: Vec<String> = current
+            .iter()
+            .filter(|p| !new_ports.contains(p))
+            .cloned()
+            .collect();
+        (added, removed)
+    };
+
+    *state.cdp_ports.write().await = new_ports.clone();
+
+    if !added.is_empty() {
+        let db = state.db.clone();
+        let binary = state.runtime.read().await.config.agent_browser.binary.clone();
+        let timeout = state.runtime.read().await.config.agent_browser.timeout_secs;
+        tokio::spawn(async move {
+            discovery::discover(&db, &binary, &added, timeout, true).await;
+        });
+    }
+
+    Ok(Json(ApiResponse::success(json!({ "saved": true, "ports": new_ports }), None)))
+}
+
+async fn refresh_cdp_ports(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+
+    let ports = state.cdp_ports.read().await.clone();
+    let db = state.db.clone();
+    let binary = state.runtime.read().await.config.agent_browser.binary.clone();
+    let timeout = state.runtime.read().await.config.agent_browser.timeout_secs;
+    tokio::spawn(async move {
+        discovery::discover(&db, &binary, &ports, timeout, false).await;
+    });
+
+    Ok(Json(ApiResponse::success(json!({ "refreshing": true }), None)))
+}
+
+// ── Accounts ─────────────────────────────────────────────────────────────────
+
+async fn get_accounts(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+    let accounts = state.db.list_accounts().unwrap_or_default();
+    Ok(Json(ApiResponse::success(
+        serde_json::to_value(&accounts).unwrap_or(json!([])),
+        None,
+    )))
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -635,6 +761,7 @@ mod tests {
     use crate::commands::executor::CommandExecutor;
     use crate::commands::registry::CommandRegistry;
     use crate::config::AppConfig;
+    use crate::db::Db;
     use crate::manifest::build_manifest;
     use crate::server::{AppState, RuntimeState};
 
@@ -648,6 +775,8 @@ mod tests {
                 config,
                 recent_executions: Vec::new(),
             })),
+            cdp_ports: Arc::new(RwLock::new(vec![])),
+            db: Db::open_in_memory(),
             executor: CommandExecutor::new(CommandRegistry::new()),
         }
     }

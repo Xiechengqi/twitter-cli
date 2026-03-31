@@ -23,7 +23,6 @@ pub struct AuthConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentBrowserConfig {
     pub binary: String,
-    pub cdp_port: String,
     pub session_name: String,
     #[serde(default = "default_timeout_secs")]
     pub timeout_secs: u64,
@@ -62,7 +61,6 @@ impl Default for AppConfig {
             },
             agent_browser: AgentBrowserConfig {
                 binary: "agent-browser".to_string(),
-                cdp_port: String::new(),
                 session_name: "twitter-cli".to_string(),
                 timeout_secs: 60,
             },
@@ -189,7 +187,6 @@ password_changed = false
 
 [agent_browser]
 binary = "agent-browser"
-cdp_port = ""
 session_name = "twitter-cli"
 
 [vnc]

@@ -25,21 +25,37 @@ impl CommandExecutor {
         command_name: &str,
         params: Value,
         config: &AppConfig,
+        managed_ports: &[String],
     ) -> AppResult<Value> {
         let command = self
             .registry
             .get(command_name)
             .ok_or_else(|| AppError::CommandNotFound(command_name.to_string()))?;
 
-        if config.agent_browser.cdp_port.is_empty() {
-            return Err(AppError::InvalidParams(
-                "agent_browser.cdp_port is required — set the CDP port in Settings".to_string(),
-            ));
+        let cdp_port = params
+            .get("cdp_port")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+            .map(ToString::to_string)
+            .ok_or_else(|| AppError::InvalidParams(
+                "cdp_port is required. Call twitter_accounts first to discover available accounts."
+                    .to_string(),
+            ))?;
+
+        if !managed_ports.contains(&cdp_port) {
+            let available = managed_ports
+                .iter()
+                .map(|p| p.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(AppError::InvalidParams(format!(
+                "cdp_port {cdp_port} is not managed. Available: {available}"
+            )));
         }
 
         let client = AgentBrowserClient::new(AgentBrowserOptions {
             binary: config.agent_browser.binary.clone(),
-            cdp_port: config.agent_browser.cdp_port.clone(),
+            cdp_port,
             session_name: config.agent_browser.session_name.clone(),
             timeout_secs: config.agent_browser.timeout_secs,
         });

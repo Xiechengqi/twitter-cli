@@ -36,6 +36,8 @@ struct ExecuteArgs {
     command: String,
     #[arg(long, default_value = "{}")]
     params: String,
+    #[arg(long)]
+    cdp_port: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -44,8 +46,8 @@ struct ServeArgs {
     host: Option<String>,
     #[arg(long)]
     port: Option<u16>,
-    #[arg(long)]
-    cdp_port: Option<String>,
+    #[arg(long, value_delimiter = ',')]
+    cdp_ports: Vec<String>,
     #[arg(long)]
     password: Option<String>,
 }
@@ -77,10 +79,15 @@ impl Cli {
             }
             CliCommand::Execute(args) => {
                 let (config, _, _) = config::load_or_init().await?;
-                let params = serde_json::from_str(&args.params)
+                let mut params: serde_json::Value = serde_json::from_str(&args.params)
                     .map_err(|err| AppError::InvalidParams(err.to_string()))?;
+                let cdp_port = args.cdp_port.unwrap_or_default();
+                if let Some(obj) = params.as_object_mut() {
+                    obj.insert("cdp_port".to_string(), serde_json::Value::String(cdp_port.clone()));
+                }
+                let managed_ports = if cdp_port.is_empty() { vec![] } else { vec![cdp_port] };
                 let executor = CommandExecutor::new(CommandRegistry::new());
-                let result = executor.execute(&args.command, params, &config).await?;
+                let result = executor.execute(&args.command, params, &config, &managed_ports).await?;
                 println!(
                     "{}",
                     serde_json::to_string_pretty(&result)
@@ -89,7 +96,7 @@ impl Cli {
                 Ok(())
             }
             CliCommand::Serve(args) => {
-                server::serve(args.host, args.port, args.cdp_port, args.password).await
+                server::serve(args.host, args.port, args.cdp_ports, args.password).await
             }
         }
     }

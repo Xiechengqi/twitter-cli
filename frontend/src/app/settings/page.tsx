@@ -22,7 +22,6 @@ export default function SettingsPage() {
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
   const [timeout, setTimeout_] = useState('');
-  const [cdpPort, setCdpPort] = useState('');
   const [vncUrl, setVncUrl] = useState('');
   const [vncUser, setVncUser] = useState('');
   const [vncPass, setVncPass] = useState('');
@@ -37,7 +36,6 @@ export default function SettingsPage() {
         setConfig(c);
         setHost(c.server.host);
         setPort(String(c.server.port));
-        setCdpPort(c.agent_browser.cdp_port);
         setTimeout_(String(c.agent_browser.timeout_secs));
         setVncUrl(c.vnc.url);
         setVncUser(c.vnc.username);
@@ -57,7 +55,6 @@ export default function SettingsPage() {
       auth: { password: '', password_changed: false },
       agent_browser: {
         binary: config.agent_browser.binary,
-        cdp_port: cdpPort,
         session_name: config.agent_browser.session_name,
         timeout_secs: parseInt(timeout, 10) || 60,
       },
@@ -127,7 +124,6 @@ export default function SettingsPage() {
                 {config?.agent_browser.binary || <span className="text-slate-400">{tr.not_detected}</span>}
               </p>
             </div>
-            <div><label>{tr.cdp_port}</label><input type="text" value={cdpPort} onChange={(e) => setCdpPort(e.target.value)} placeholder={tr.cdp_port_placeholder} /></div>
             <div><label>{tr.timeout}</label><input type="number" value={timeout} onChange={(e) => setTimeout_(e.target.value)} /></div>
           </div>
         </Card>

@@ -41,9 +41,17 @@ export interface AuthConfig {
 
 export interface AgentBrowserConfig {
   binary: string;
-  cdp_port: string;
   session_name: string;
   timeout_secs: number;
+}
+
+export interface AccountEntry {
+  cdp_port: string;
+  username: string;
+  display_name: string;
+  avatar_url: string;
+  online: boolean;
+  last_checked: number;
 }
 
 export interface VncConfig {
@@ -72,7 +80,8 @@ export interface BootstrapInfo {
   first_run: boolean;
   password_required: boolean;
   server: { host: string; port: number };
-  agent_browser: { binary: string; detected: boolean; cdp_port: string };
+  agent_browser: { binary: string; detected: boolean };
+  cdp: { ports: string[]; online: number; offline: number };
   vnc: { configured: boolean };
 }
 

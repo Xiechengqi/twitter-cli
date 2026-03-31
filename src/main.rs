@@ -3,6 +3,8 @@ mod auth;
 mod cli;
 mod commands;
 mod config;
+mod db;
+mod discovery;
 mod embedded;
 mod errors;
 mod manifest;
