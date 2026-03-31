@@ -36,6 +36,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/accounts", get(get_accounts))
         .route("/api/accounts/{cdp_port}/persona", put(update_persona))
         .route("/api/upload", post(upload_file))
+        .route("/api/uploads/{filename}", get(serve_upload))
         .route("/api/preview", get(list_preview_posts))
         .route("/api/preview/{id}", put(update_preview_post).delete(delete_preview_post))
         .route("/api/preview/{id}/send", post(send_preview_post))
@@ -906,6 +907,36 @@ async fn upload_file(
     }
 
     Err(AppError::InvalidParams("no file in request".to_string()))
+}
+
+async fn serve_upload(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(filename): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    require_auth(&headers, &state).await?;
+
+    // Reject path traversal attempts
+    if filename.contains('/') || filename.contains("..") {
+        return Err(AppError::InvalidParams("invalid filename".to_string()));
+    }
+
+    let path = std::env::temp_dir().join("twitter-cli-uploads").join(&filename);
+    let data = tokio::fs::read(&path)
+        .await
+        .map_err(|_| AppError::InvalidParams(format!("file not found: {filename}")))?;
+
+    let mime = match std::path::Path::new(&filename).extension().and_then(|e| e.to_str()) {
+        Some("png") => "image/png",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        _ => "image/jpeg",
+    };
+
+    Ok((
+        [(header::CONTENT_TYPE, HeaderValue::from_static(mime))],
+        data,
+    ))
 }
 
 // ── Preview Posts ─────────────────────────────────────────────────────────────

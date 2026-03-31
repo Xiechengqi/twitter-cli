@@ -99,9 +99,13 @@ function PreviewCard({
       />
 
       {post.image && (
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-500">{tr.image_label}:</span>
-          <span className="text-xs text-slate-400 truncate max-w-xs">{post.image}</span>
+        <div className="mt-3">
+          <img
+            src={`/api/uploads/${encodeURIComponent(post.image.split('/').pop() ?? '')}`}
+            alt=""
+            className="h-24 w-24 rounded-lg object-cover border border-slate-200 shadow-sm"
+          />
+          <p className="text-xs text-slate-400 mt-1 truncate max-w-xs">{post.image}</p>
         </div>
       )}
 
