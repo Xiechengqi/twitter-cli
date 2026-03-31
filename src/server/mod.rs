@@ -82,10 +82,13 @@ pub async fn serve(
     }
 
     let db = Db::open()?;
-    let cdp_ports: Vec<String> = cdp_ports_arg
-        .into_iter()
-        .filter(|s| !s.is_empty())
-        .collect();
+    // Merge CLI --cdp-ports with config file's cdp_ports (union, deduplicated)
+    let mut cdp_ports: Vec<String> = config.cdp_ports.clone();
+    for p in cdp_ports_arg {
+        if !p.is_empty() && !cdp_ports.contains(&p) {
+            cdp_ports.push(p);
+        }
+    }
     let cdp_ports_shared = Arc::new(RwLock::new(cdp_ports.clone()));
 
     // Startup discovery: skip ports already cached as online in db

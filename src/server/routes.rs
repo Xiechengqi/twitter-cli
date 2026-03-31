@@ -726,6 +726,14 @@ async fn update_cdp_ports(
 
     *state.cdp_ports.write().await = new_ports.clone();
 
+    // Persist to config file
+    {
+        let mut runtime = state.runtime.write().await;
+        runtime.config.cdp_ports = new_ports.clone();
+        let path = config::config_path()?;
+        config::save(&path, &runtime.config).await?;
+    }
+
     if !added.is_empty() {
         let db = state.db.clone();
         let binary = state.runtime.read().await.config.agent_browser.binary.clone();

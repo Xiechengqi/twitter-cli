@@ -46,6 +46,8 @@ pub struct AppConfig {
     pub auth: AuthConfig,
     pub agent_browser: AgentBrowserConfig,
     pub vnc: VncConfig,
+    #[serde(default)]
+    pub cdp_ports: Vec<String>,
 }
 
 impl Default for AppConfig {
@@ -70,6 +72,7 @@ impl Default for AppConfig {
                 password: String::new(),
                 embed: true,
             },
+            cdp_ports: Vec::new(),
         }
     }
 }
@@ -194,6 +197,8 @@ url = ""
 username = ""
 password = ""
 embed = true
+
+cdp_ports = []
 "#,
         )
         .expect("write config");
