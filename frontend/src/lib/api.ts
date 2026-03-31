@@ -119,7 +119,7 @@ export async function updateCdpPorts(ports: string[]): Promise<ApiResponse<{ por
   });
 }
 
-export async function refreshCdpPorts(): Promise<ApiResponse<{ triggered: boolean }>> {
+export async function refreshCdpPorts(): Promise<ApiResponse<{ refreshing: boolean }>> {
   return request('/api/cdp-ports/refresh', { method: 'POST' });
 }
 

@@ -68,11 +68,17 @@ pub async fn discover(
 
         match probe_port(binary, port, timeout_secs).await {
             Some(entry) => {
-                let _ = db.upsert_account(&entry);
+                if let Err(e) = db.upsert_account(&entry) {
+                    eprintln!("[discovery] upsert_account({port}): {e}");
+                }
             }
             None => {
-                let _ = db.ensure_port(port);
-                let _ = db.set_offline(port, now_secs());
+                if let Err(e) = db.ensure_port(port) {
+                    eprintln!("[discovery] ensure_port({port}): {e}");
+                }
+                if let Err(e) = db.set_offline(port, now_secs()) {
+                    eprintln!("[discovery] set_offline({port}): {e}");
+                }
             }
         }
     }

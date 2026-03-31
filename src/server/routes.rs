@@ -416,7 +416,16 @@ async fn call_mcp(
 
     // twitter_accounts is a built-in tool, not routed through the command executor
     if tool_name == "twitter_accounts" {
-        let accounts = state.db.list_accounts().unwrap_or_default();
+        let accounts = match state.db.list_accounts() {
+            Ok(a) => a,
+            Err(e) => {
+                return Json(json!({
+                    "jsonrpc": "2.0",
+                    "id": payload.id,
+                    "error": { "code": -32603, "message": format!("db error: {e}") }
+                }));
+            }
+        };
         let result = serde_json::to_value(&accounts).unwrap_or(json!([]));
         let formatted = serde_json::to_string_pretty(&result).unwrap_or_default();
         return Json(json!({
@@ -667,7 +676,7 @@ async fn get_cdp_ports(
 ) -> Result<Json<ApiResponse<Value>>, AppError> {
     require_auth(&headers, &state).await?;
     let ports = state.cdp_ports.read().await.clone();
-    Ok(Json(ApiResponse::success(json!(ports), None)))
+    Ok(Json(ApiResponse::success(json!({ "ports": ports }), None)))
 }
 
 #[derive(Deserialize)]
@@ -741,9 +750,9 @@ async fn get_accounts(
     headers: HeaderMap,
 ) -> Result<Json<ApiResponse<Value>>, AppError> {
     require_auth(&headers, &state).await?;
-    let accounts = state.db.list_accounts().unwrap_or_default();
+    let accounts = state.db.list_accounts()?;
     Ok(Json(ApiResponse::success(
-        serde_json::to_value(&accounts).unwrap_or(json!([])),
+        serde_json::to_value(&accounts).map_err(|e| AppError::Internal(e.to_string()))?,
         None,
     )))
 }

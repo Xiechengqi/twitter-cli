@@ -66,26 +66,39 @@ export default function CdpPage() {
   const handleAddPort = async () => {
     const port = newPort.trim();
     if (!port || ports.includes(port)) return;
-    const next = [...ports, port];
-    const res = await api.updateCdpPorts(next);
-    setPorts(res.data.ports);
-    setNewPort('');
+    try {
+      const res = await api.updateCdpPorts([...ports, port]);
+      setPorts(res.data.ports);
+      setNewPort('');
+    } catch (e) {
+      console.error('add port failed:', e);
+    }
   };
 
   const handleRemovePort = async (port: string) => {
-    const next = ports.filter((p) => p !== port);
-    const res = await api.updateCdpPorts(next);
-    setPorts(res.data.ports);
+    try {
+      const res = await api.updateCdpPorts(ports.filter((p) => p !== port));
+      setPorts(res.data.ports);
+    } catch (e) {
+      console.error('remove port failed:', e);
+    }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
       await api.refreshCdpPorts();
-      // Poll accounts after a short delay to pick up results
-      await new Promise((r) => setTimeout(r, 2000));
-      const accountsRes = await api.getAccounts();
-      setAccounts(accountsRes.data);
+      // Poll until any last_checked timestamp advances (max 30s / 15 attempts)
+      const before = new Map(accounts.map((a) => [a.cdp_port, a.last_checked]));
+      for (let i = 0; i < 15; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const res = await api.getAccounts();
+        setAccounts(res.data);
+        const changed = res.data.some((a) => (before.get(a.cdp_port) ?? 0) !== a.last_checked);
+        if (changed) break;
+      }
+    } catch (e) {
+      console.error('refresh failed:', e);
     } finally {
       setRefreshing(false);
     }

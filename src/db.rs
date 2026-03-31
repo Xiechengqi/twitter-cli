@@ -63,7 +63,7 @@ impl Db {
     }
 
     pub fn list_accounts(&self) -> AppResult<Vec<AccountEntry>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
         let mut stmt = conn
             .prepare("SELECT cdp_port, username, display_name, avatar_url, online, last_checked FROM accounts ORDER BY cdp_port")
             .map_err(|e| AppError::Internal(e.to_string()))?;
@@ -87,7 +87,7 @@ impl Db {
     }
 
     pub fn get_account(&self, cdp_port: &str) -> AppResult<Option<AccountEntry>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
         let mut stmt = conn
             .prepare("SELECT cdp_port, username, display_name, avatar_url, online, last_checked FROM accounts WHERE cdp_port = ?1")
             .map_err(|e| AppError::Internal(e.to_string()))?;
@@ -110,7 +110,7 @@ impl Db {
     }
 
     pub fn upsert_account(&self, entry: &AccountEntry) -> AppResult<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
         conn.execute(
             "INSERT INTO accounts (cdp_port, username, display_name, avatar_url, online, last_checked)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)
@@ -134,7 +134,7 @@ impl Db {
     }
 
     pub fn set_offline(&self, cdp_port: &str, now: u64) -> AppResult<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
         conn.execute(
             "UPDATE accounts SET online = 0, last_checked = ?1 WHERE cdp_port = ?2",
             rusqlite::params![now, cdp_port],
@@ -145,7 +145,7 @@ impl Db {
 
     /// Ensure a row exists for this port (insert if missing, don't overwrite existing data).
     pub fn ensure_port(&self, cdp_port: &str) -> AppResult<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
         conn.execute(
             "INSERT OR IGNORE INTO accounts (cdp_port) VALUES (?1)",
             [cdp_port],
