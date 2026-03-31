@@ -111,6 +111,19 @@ impl AgentBrowserClient {
         }
     }
 
+    pub async fn upload(&self, selector: &str, file_path: &str) -> AppResult<Value> {
+        let response = self.run(&["upload", selector, file_path]).await?;
+        if response.success {
+            Ok(response.data.unwrap_or(Value::Null))
+        } else {
+            Err(AppError::BrowserExecutionFailed(
+                response
+                    .error
+                    .unwrap_or_else(|| "agent-browser upload failed".to_string()),
+            ))
+        }
+    }
+
     pub async fn wait_ms(&self, milliseconds: u64) -> AppResult<()> {
         let response = self.run(&["wait", &milliseconds.to_string()]).await?;
         if response.success {

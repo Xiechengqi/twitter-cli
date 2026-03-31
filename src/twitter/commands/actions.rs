@@ -396,8 +396,33 @@ pub async fn execute_unfollow(client: &AgentBrowserClient, params: &Value) -> Ap
 
 pub async fn execute_post(client: &AgentBrowserClient, params: &Value) -> AppResult<Value> {
     let text = required_string(params, "text")?;
+    let image = params
+        .get("image")
+        .and_then(Value::as_str)
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(String::from);
+
     client.open("https://x.com/compose/tweet").await?;
     client.wait_ms(3_000).await?;
+
+    // Upload image before filling text (upload may shift focus)
+    if let Some(ref image_path) = image {
+        client
+            .upload(r#"input[data-testid="fileInput"]"#, image_path)
+            .await?;
+
+        // Wait for image preview to appear (poll up to 30s)
+        let wait_script = r#"(async () => {
+          for (let i = 0; i < 30; i++) {
+            const preview = document.querySelector('[data-testid="attachments"]');
+            if (preview) return JSON.stringify({ ok: true, message: 'Image uploaded.' });
+            await new Promise(r => setTimeout(r, 1000));
+          }
+          return JSON.stringify({ ok: false, message: 'Image upload timed out — preview not detected after 30s.' });
+        })()"#;
+        run_ui_action(client, wait_script).await?;
+    }
 
     let script = format!(
         r#"(async () => {{

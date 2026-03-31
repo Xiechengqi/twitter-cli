@@ -358,14 +358,22 @@ pub fn command_specs() -> Vec<CommandSpec> {
             category: "write",
             wave: 3,
             execution_mode: "ui-first",
-            summary: "Post a new tweet",
+            summary: "Post a new tweet, optionally with an image",
             requires_auth: true,
-            params: vec![ParamSpec {
-                name: "text",
-                kind: "string",
-                required: true,
-                description: "Tweet text",
-            }],
+            params: vec![
+                ParamSpec {
+                    name: "text",
+                    kind: "string",
+                    required: true,
+                    description: "Tweet text",
+                },
+                ParamSpec {
+                    name: "image",
+                    kind: "string",
+                    required: false,
+                    description: "Absolute path to image file (png/jpg/gif/webp)",
+                },
+            ],
         },
         CommandSpec {
             name: "reply",
