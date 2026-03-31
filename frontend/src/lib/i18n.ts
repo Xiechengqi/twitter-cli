@@ -63,6 +63,10 @@ const dict = {
     en: { title: 'Command Runner', description: 'Run any registered command through the same API used by CLI and MCP mappings.', command_label: 'Command', execute: 'Execute', running: ' Running…', registered: 'Commands', account: 'Account', no_accounts: 'No accounts found. Add CDP ports and refresh.' },
     zh: { title: '命令执行器', description: '通过 CLI 和 MCP 映射使用的同一 API 运行任何已注册命令。', command_label: '命令', execute: '执行', running: ' 执行中…', registered: '命令列表', account: '账号', no_accounts: '未发现账号，请前往 CDP 页面添加端口并刷新。' },
   },
+  upload: {
+    en: { drop_hint: 'Drop image here or click to browse', uploading: 'Uploading…', change: 'Change', formats: 'PNG, JPG, GIF, WEBP' },
+    zh: { drop_hint: '拖拽图片到此处或点击选择', uploading: '上传中…', change: '更换', formats: 'PNG, JPG, GIF, WEBP' },
+  },
   mcp: {
     en: { title: 'MCP', description: 'All MCP tools use the same password as Console and API.', endpoint: 'Endpoint: ', tool_index: 'Tool index: ', tool_label: 'Tool', arguments_label: 'Arguments (JSON)', call_tool: 'Call Tool', tools_heading: 'Tools', account: 'Account', no_accounts: 'No accounts found. Add CDP ports and refresh.' },
     zh: { title: 'MCP', description: '所有 MCP 工具使用与控制台和 API 相同的密码。', endpoint: '端点：', tool_index: '工具索引：', tool_label: '工具', arguments_label: '参数 (JSON)', call_tool: '调用工具', tools_heading: '工具列表', account: '账号', no_accounts: '未发现账号，请前往 CDP 页面添加端口并刷新。' },
@@ -167,6 +171,7 @@ export function t(lang: Lang) {
     components: dict.components[lang],
     history: dict.history[lang],
     cdp: dict.cdp[lang],
+    upload: dict.upload[lang],
   };
 }
 

@@ -5,6 +5,7 @@ import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
 import { Spinner } from '@/components/spinner';
 import { VncEmbed } from '@/components/vnc-embed';
+import { FileUploadInput } from '@/components/file-upload-input';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
@@ -139,7 +140,12 @@ export default function CommandsPage() {
                   <label>
                     {p.name}{p.required && <span className="text-red-500 ml-1">*</span>}
                   </label>
-                  {p.kind === 'array' ? (
+                  {p.name === 'image' ? (
+                    <FileUploadInput
+                      value={params[p.name] || ''}
+                      onChange={(path) => handleParamChange(p.name, path)}
+                    />
+                  ) : p.kind === 'array' ? (
                     <textarea
                       rows={2}
                       placeholder={`${p.description} (JSON array)`}

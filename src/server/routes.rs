@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
+use axum::extract::{Multipart, Path, State};
 use axum::http::{HeaderMap, HeaderValue, header};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post, put};
@@ -35,6 +35,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/cdp-ports/refresh", post(refresh_cdp_ports))
         .route("/api/accounts", get(get_accounts))
         .route("/api/accounts/{cdp_port}/persona", put(update_persona))
+        .route("/api/upload", post(upload_file))
         .fallback(crate::embedded::serve_static)
         .with_state(state)
 }
@@ -807,6 +808,69 @@ async fn update_persona(
         json!({ "saved": true, "username": account.username }),
         None,
     )))
+}
+
+// ── File Upload ─────────────────────────────────────────────────────────────
+
+async fn upload_file(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    mut multipart: Multipart,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| AppError::InvalidParams(format!("multipart error: {e}")))?
+    {
+        let file_name = field
+            .file_name()
+            .unwrap_or("upload")
+            .to_string();
+
+        let data = field
+            .bytes()
+            .await
+            .map_err(|e| AppError::InvalidParams(format!("failed to read field: {e}")))?;
+
+        if data.is_empty() {
+            return Err(AppError::InvalidParams("empty file".to_string()));
+        }
+
+        let ext = std::path::Path::new(&file_name)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("bin");
+
+        let dest_dir = std::env::temp_dir().join("twitter-cli-uploads");
+        tokio::fs::create_dir_all(&dest_dir)
+            .await
+            .map_err(|e| AppError::Internal(format!("mkdir failed: {e}")))?;
+
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let dest = dest_dir.join(format!("{unique}.{ext}"));
+
+        tokio::fs::write(&dest, &data)
+            .await
+            .map_err(|e| AppError::Internal(format!("write failed: {e}")))?;
+
+        let abs_path = dest
+            .canonicalize()
+            .map_err(|e| AppError::Internal(format!("canonicalize failed: {e}")))?
+            .to_string_lossy()
+            .to_string();
+
+        return Ok(Json(ApiResponse::success(
+            json!({ "path": abs_path, "size": data.len(), "name": file_name }),
+            None,
+        )));
+    }
+
+    Err(AppError::InvalidParams("no file in request".to_string()))
 }
 
 #[cfg(test)]

@@ -137,3 +137,11 @@ export async function updatePersona(
     body: JSON.stringify({ persona }),
   });
 }
+
+export async function uploadFile(
+  file: File,
+): Promise<ApiResponse<{ path: string; size: number; name: string }>> {
+  const form = new FormData();
+  form.append('file', file);
+  return request('/api/upload', { method: 'POST', body: form });
+}
