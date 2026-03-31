@@ -42,7 +42,7 @@ async fn bootstrap(State(state): State<Arc<AppState>>) -> Json<Value> {
     let runtime = state.runtime.read().await;
     Json(json!({
         "first_run": state.first_run,
-        "password_required": !runtime.config.is_password_initialized(),
+        "password_required": !runtime.config.auth.password.is_empty() && !runtime.config.auth.password_changed,
         "server": {
             "host": runtime.config.server.host,
             "port": runtime.config.server.port,

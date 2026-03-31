@@ -59,13 +59,25 @@ pub struct AppState {
     pub executor: CommandExecutor,
 }
 
-pub async fn serve(host_override: Option<String>, port_override: Option<u16>) -> AppResult<()> {
+pub async fn serve(
+    host_override: Option<String>,
+    port_override: Option<u16>,
+    cdp_port_override: Option<String>,
+    password_override: Option<String>,
+) -> AppResult<()> {
     let (mut config, path, first_run) = config::load_or_init().await?;
     if let Some(host) = host_override {
         config.server.host = host;
     }
     if let Some(port) = port_override {
         config.server.port = port;
+    }
+    if let Some(cdp_port) = cdp_port_override {
+        config.agent_browser.cdp_port = cdp_port;
+    }
+    if let Some(password) = password_override {
+        config.auth.password = password;
+        config.auth.password_changed = true;
     }
 
     let auth_state = AuthState::from_config(&config);

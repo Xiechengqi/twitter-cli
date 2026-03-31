@@ -42,7 +42,7 @@ pub fn extract_cookie_token(headers: &HeaderMap) -> Option<String> {
 
 pub fn is_authenticated(headers: &HeaderMap, state: &AuthState) -> bool {
     if !state.password_initialized {
-        return false;
+        return true;
     }
 
     extract_bearer(headers)

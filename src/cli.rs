@@ -44,6 +44,10 @@ struct ServeArgs {
     host: Option<String>,
     #[arg(long)]
     port: Option<u16>,
+    #[arg(long)]
+    cdp_port: Option<String>,
+    #[arg(long)]
+    password: Option<String>,
 }
 
 impl Cli {
@@ -84,7 +88,9 @@ impl Cli {
                 );
                 Ok(())
             }
-            CliCommand::Serve(args) => server::serve(args.host, args.port).await,
+            CliCommand::Serve(args) => {
+                server::serve(args.host, args.port, args.cdp_port, args.password).await
+            }
         }
     }
 }

@@ -53,7 +53,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             server: ServerConfig {
-                host: "0.0.0.0".to_string(),
+                host: "127.0.0.1".to_string(),
                 port: 12233,
             },
             auth: AuthConfig {
@@ -228,7 +228,7 @@ embed = true
     #[test]
     fn default_config_uses_public_bind_host() {
         let config = AppConfig::default();
-        assert_eq!(config.server.host, "0.0.0.0");
+        assert_eq!(config.server.host, "127.0.0.1");
         assert_eq!(config.server.port, 12233);
     }
 }
