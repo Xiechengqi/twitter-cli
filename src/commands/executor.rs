@@ -42,12 +42,10 @@ impl CommandExecutor {
                     .to_string(),
             ))?;
 
-        if !managed_ports.contains(&cdp_port) {
-            let available = managed_ports
-                .iter()
-                .map(|p| p.as_str())
-                .collect::<Vec<_>>()
-                .join(", ");
+        // Only validate against managed_ports when the list is non-empty.
+        // An empty list means no restriction (e.g. direct CLI / REST call without --cdp-ports).
+        if !managed_ports.is_empty() && !managed_ports.contains(&cdp_port) {
+            let available = managed_ports.join(", ");
             return Err(AppError::InvalidParams(format!(
                 "cdp_port {cdp_port} is not managed. Available: {available}"
             )));
