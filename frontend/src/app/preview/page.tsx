@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { X, ZoomIn } from 'lucide-react';
 import { Nav } from '@/components/nav';
 import { Card } from '@/components/card';
 import { Spinner } from '@/components/spinner';
@@ -8,6 +9,28 @@ import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
 import type { AccountEntry, PreviewPost } from '@/lib/types';
+
+function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      <img
+        src={src}
+        alt=""
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[90vh] max-w-[90vw] rounded-xl shadow-2xl object-contain"
+      />
+    </div>
+  );
+}
 
 function formatTimestamp(epoch: number, lang: 'en' | 'zh'): string {
   const tr = t(lang).components;
@@ -37,6 +60,7 @@ function PreviewCard({
   const [sending, setSending] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [sent, setSent] = useState(false);
+  const [lightbox, setLightbox] = useState(false);
 
   const account = accounts.find((a) => a.cdp_port === post.cdp_port);
   const accountLabel = account?.username ? `@${account.username}` : `port ${post.cdp_port}`;
@@ -98,16 +122,25 @@ function PreviewCard({
         className="mt-1 w-full resize-none"
       />
 
-      {post.image && (
-        <div className="mt-3">
-          <img
-            src={`/api/uploads/${encodeURIComponent(post.image.split('/').pop() ?? '')}`}
-            alt=""
-            className="h-24 w-24 rounded-lg object-cover border border-slate-200 shadow-sm"
-          />
-          <p className="text-xs text-slate-400 mt-1 truncate max-w-xs">{post.image}</p>
-        </div>
-      )}
+      {post.image && (() => {
+        const imgSrc = `/api/uploads/${encodeURIComponent(post.image.split('/').pop() ?? '')}`;
+        return (
+          <div className="mt-3">
+            <div className="relative inline-block group cursor-zoom-in" onClick={() => setLightbox(true)}>
+              <img
+                src={imgSrc}
+                alt=""
+                className="h-24 w-24 rounded-lg object-cover border border-slate-200 shadow-sm transition-opacity group-hover:opacity-80"
+              />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <ZoomIn className="h-5 w-5 text-white drop-shadow-md" />
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-1 truncate max-w-xs">{post.image}</p>
+            {lightbox && <ImageLightbox src={imgSrc} onClose={() => setLightbox(false)} />}
+          </div>
+        );
+      })()}
 
       <div className="mt-4 flex items-center gap-3">
         <button
