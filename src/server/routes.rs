@@ -313,7 +313,7 @@ async fn call_mcp(
                             "listChanged": false
                         }
                     },
-                    "instructions": "twitter-cli manages multiple Twitter accounts via browser sessions.\n\n1. Call `twitter_accounts` first to discover available accounts and their cdp_port values.\n2. Every subsequent tool call MUST include `cdp_port` to target the correct account.\n3. Tools sharing the same cdp_port MUST be called sequentially.\n4. Tools targeting different cdp_port values may run in parallel."
+                    "instructions": "twitter-cli manages multiple Twitter accounts via browser sessions.\n\n1. Call `twitter_accounts` first to discover available accounts and their cdp_port values.\n2. Every subsequent tool call MUST include `cdp_port` to target the correct account.\n3. Tools sharing the same cdp_port MUST be called sequentially.\n4. Tools targeting different cdp_port values may run in parallel.\n5. CRITICAL — Persona: Each account returned by `twitter_accounts` may have a non-empty `persona` field. When generating ANY text content for `post`, `reply`, `thread`, or `reply_dm` commands, you MUST fully adopt that account's persona — match the described tone, style, language, and personality. If the persona says to use English, write in English. If it says to be humorous, be humorous. The persona overrides your default writing style for that account."
                 }
             }));
         }
