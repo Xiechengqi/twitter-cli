@@ -39,7 +39,13 @@ export default function CommandsPage() {
       try {
         const [cmdRes, accRes] = await Promise.all([api.getCommands(), api.getAccounts()]);
         setCommands(cmdRes.data);
-        if (cmdRes.data.length > 0) setSelected(cmdRes.data[0].name);
+        if (cmdRes.data.length > 0) {
+          const cached = localStorage.getItem('twitter-cli:last-command');
+          const initial = cached && cmdRes.data.some((c) => c.name === cached)
+            ? cached
+            : cmdRes.data[0].name;
+          setSelected(initial);
+        }
         setAccounts(accRes.data);
         if (accRes.data.length > 0) setCdpPort(accRes.data[0].cdp_port);
       } catch { /* 401 */ }
@@ -51,6 +57,7 @@ export default function CommandsPage() {
 
   const handleSelect = (name: string) => {
     setSelected(name);
+    localStorage.setItem('twitter-cli:last-command', name);
     setParams({});
     setResult('');
     setCliCmd('');

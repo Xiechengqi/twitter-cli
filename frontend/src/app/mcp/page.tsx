@@ -45,7 +45,13 @@ export default function McpPage() {
         ]);
         setTools(toolRes.data);
         setCommands(cmdRes.data);
-        if (toolRes.data.length > 0) setToolName(toolRes.data[0].name);
+        if (toolRes.data.length > 0) {
+          const cached = localStorage.getItem('twitter-cli:last-mcp-tool');
+          const initial = cached && toolRes.data.some((t) => t.name === cached)
+            ? cached
+            : toolRes.data[0].name;
+          setToolName(initial);
+        }
         setAccounts(accRes.data);
         if (accRes.data.length > 0) setCdpPort(accRes.data[0].cdp_port);
       } catch { /* 401 */ }
@@ -61,6 +67,7 @@ export default function McpPage() {
 
   const handleToolChange = useCallback((name: string) => {
     setToolName(name);
+    localStorage.setItem('twitter-cli:last-mcp-tool', name);
     setParams({});
     setResult('');
     setCurlCmd('');
