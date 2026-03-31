@@ -39,6 +39,7 @@ async fn probe_port(binary: &str, cdp_port: &str, timeout_secs: u64) -> Option<A
         avatar_url: String::new(),
         online: true,
         last_checked: now,
+        persona: String::new(),
     })
 }
 
