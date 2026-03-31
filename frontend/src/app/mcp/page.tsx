@@ -8,7 +8,9 @@ import { VncEmbed } from '@/components/vnc-embed';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
-import type { ToolSpec, CommandSpec } from '@/lib/types';
+import type { AccountEntry, ToolSpec, CommandSpec } from '@/lib/types';
+
+const BUILTIN_TOOLS = new Set(['twitter_accounts']);
 
 function buildCurlCommand(toolName: string, args: Record<string, unknown>): string {
   const body = JSON.stringify({
@@ -25,7 +27,9 @@ export default function McpPage() {
   const tr = t(lang).mcp;
   const [tools, setTools] = useState<ToolSpec[]>([]);
   const [commands, setCommands] = useState<CommandSpec[]>([]);
+  const [accounts, setAccounts] = useState<AccountEntry[]>([]);
   const [toolName, setToolName] = useState('');
+  const [cdpPort, setCdpPort] = useState('');
   const [params, setParams] = useState<Record<string, string>>({});
   const [result, setResult] = useState('');
   const [curlCmd, setCurlCmd] = useState('');
@@ -35,12 +39,14 @@ export default function McpPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [toolRes, cmdRes] = await Promise.all([api.getMcpTools(), api.getCommands()]);
+        const [toolRes, cmdRes, accRes] = await Promise.all([
+          api.getMcpTools(), api.getCommands(), api.getAccounts(),
+        ]);
         setTools(toolRes.data);
         setCommands(cmdRes.data);
-        if (toolRes.data.length > 0) {
-          setToolName(toolRes.data[0].name);
-        }
+        if (toolRes.data.length > 0) setToolName(toolRes.data[0].name);
+        setAccounts(accRes.data);
+        if (accRes.data.length > 0) setCdpPort(accRes.data[0].cdp_port);
       } catch { /* 401 */ }
       finally { setLoading(false); }
     })();
@@ -63,9 +69,11 @@ export default function McpPage() {
     setParams((prev) => ({ ...prev, [name]: value }));
   };
 
+  const needsCdpPort = !BUILTIN_TOOLS.has(toolName);
+
   const parseParams = (): Record<string, unknown> | null => {
-    if (!cmdSpec) return {};
-    const parsed: Record<string, unknown> = {};
+    if (!cmdSpec) return needsCdpPort ? { cdp_port: cdpPort } : {};
+    const parsed: Record<string, unknown> = needsCdpPort ? { cdp_port: cdpPort } : {};
     for (const p of cmdSpec.params) {
       const val = (params[p.name] || '').trim();
       if (!val) continue;
@@ -121,6 +129,28 @@ export default function McpPage() {
             <pre className="mb-6 text-xs">Authorization: Bearer &lt;console-password&gt;</pre>
 
             <div className="space-y-4">
+              {/* Account selector — not needed for built-in tools like twitter_accounts */}
+              {needsCdpPort && (
+                <div>
+                  <label>{tr.account}</label>
+                  {accounts.length === 0 ? (
+                    <p className="mt-1 text-xs text-amber-600">{tr.no_accounts}</p>
+                  ) : (
+                    <select
+                      value={cdpPort}
+                      onChange={(e) => setCdpPort(e.target.value)}
+                      className="mt-1"
+                    >
+                      {accounts.map((a) => (
+                        <option key={a.cdp_port} value={a.cdp_port}>
+                          {a.username ? `@${a.username} — port ${a.cdp_port}` : `port ${a.cdp_port}`}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
               {cmdSpec?.params.map((p) => (
                 <div key={p.name}>
                   <label>

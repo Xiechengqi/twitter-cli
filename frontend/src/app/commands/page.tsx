@@ -8,21 +8,25 @@ import { VncEmbed } from '@/components/vnc-embed';
 import { useLang } from '@/lib/use-lang';
 import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
-import type { CommandSpec } from '@/lib/types';
+import type { AccountEntry, CommandSpec } from '@/lib/types';
 
-function buildCliCommand(name: string, params: Record<string, unknown>): string {
-  const json = JSON.stringify(params);
+function buildCliCommand(name: string, cdpPort: string, params: Record<string, unknown>): string {
+  const { cdp_port: _, ...rest } = params as Record<string, unknown> & { cdp_port?: unknown };
+  const json = JSON.stringify(rest);
+  const portFlag = cdpPort ? ` --cdp-port ${cdpPort}` : '';
   if (json === '{}') {
-    return `twitter-cli execute ${name}`;
+    return `twitter-cli execute ${name}${portFlag}`;
   }
-  return `twitter-cli execute ${name} --params '${json}'`;
+  return `twitter-cli execute ${name}${portFlag} --params '${json}'`;
 }
 
 export default function CommandsPage() {
   const { lang } = useLang();
   const tr = t(lang).commands;
   const [commands, setCommands] = useState<CommandSpec[]>([]);
+  const [accounts, setAccounts] = useState<AccountEntry[]>([]);
   const [selected, setSelected] = useState('');
+  const [cdpPort, setCdpPort] = useState('');
   const [params, setParams] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState('');
@@ -32,9 +36,11 @@ export default function CommandsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.getCommands();
-        setCommands(res.data);
-        if (res.data.length > 0) setSelected(res.data[0].name);
+        const [cmdRes, accRes] = await Promise.all([api.getCommands(), api.getAccounts()]);
+        setCommands(cmdRes.data);
+        if (cmdRes.data.length > 0) setSelected(cmdRes.data[0].name);
+        setAccounts(accRes.data);
+        if (accRes.data.length > 0) setCdpPort(accRes.data[0].cdp_port);
       } catch { /* 401 */ }
       finally { setLoading(false); }
     })();
@@ -55,7 +61,7 @@ export default function CommandsPage() {
 
   const parseParams = (): Record<string, unknown> | null => {
     if (!cmd) return null;
-    const parsed: Record<string, unknown> = {};
+    const parsed: Record<string, unknown> = { cdp_port: cdpPort };
     for (const p of cmd.params) {
       const val = (params[p.name] || '').trim();
       if (!val) continue;
@@ -75,7 +81,7 @@ export default function CommandsPage() {
     const parsed = parseParams();
     if (!parsed) return;
 
-    setCliCmd(buildCliCommand(selected, parsed));
+    setCliCmd(buildCliCommand(selected, cdpPort, parsed));
     setRunning(true);
     setResult('');
     try {
@@ -108,6 +114,26 @@ export default function CommandsPage() {
             <p className="text-sm text-slate-500 mb-6">{cmd?.summary || tr.description}</p>
 
             <div className="space-y-4">
+              {/* Account selector */}
+              <div>
+                <label>{tr.account}</label>
+                {accounts.length === 0 ? (
+                  <p className="mt-1 text-xs text-amber-600">{tr.no_accounts}</p>
+                ) : (
+                  <select
+                    value={cdpPort}
+                    onChange={(e) => setCdpPort(e.target.value)}
+                    className="mt-1"
+                  >
+                    {accounts.map((a) => (
+                      <option key={a.cdp_port} value={a.cdp_port}>
+                        {a.username ? `@${a.username} — port ${a.cdp_port}` : `port ${a.cdp_port}`}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
               {cmd?.params.map((p) => (
                 <div key={p.name}>
                   <label>

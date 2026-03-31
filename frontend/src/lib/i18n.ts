@@ -60,12 +60,12 @@ const dict = {
     zh: { title: '设置密码', description: '首次运行需要设置密码。此密码也将用作 API 和 MCP Bearer token。', password: '密码', submit: '保存密码' },
   },
   commands: {
-    en: { title: 'Command Runner', description: 'Run any registered command through the same API used by CLI and MCP mappings.', command_label: 'Command', execute: 'Execute', running: ' Running…', registered: 'Commands' },
-    zh: { title: '命令执行器', description: '通过 CLI 和 MCP 映射使用的同一 API 运行任何已注册命令。', command_label: '命令', execute: '执行', running: ' 执行中…', registered: '命令列表' },
+    en: { title: 'Command Runner', description: 'Run any registered command through the same API used by CLI and MCP mappings.', command_label: 'Command', execute: 'Execute', running: ' Running…', registered: 'Commands', account: 'Account', no_accounts: 'No accounts found. Add CDP ports and refresh.' },
+    zh: { title: '命令执行器', description: '通过 CLI 和 MCP 映射使用的同一 API 运行任何已注册命令。', command_label: '命令', execute: '执行', running: ' 执行中…', registered: '命令列表', account: '账号', no_accounts: '未发现账号，请前往 CDP 页面添加端口并刷新。' },
   },
   mcp: {
-    en: { title: 'MCP', description: 'All MCP tools use the same password as Console and API.', endpoint: 'Endpoint: ', tool_index: 'Tool index: ', tool_label: 'Tool', arguments_label: 'Arguments (JSON)', call_tool: 'Call Tool', tools_heading: 'Tools' },
-    zh: { title: 'MCP', description: '所有 MCP 工具使用与控制台和 API 相同的密码。', endpoint: '端点：', tool_index: '工具索引：', tool_label: '工具', arguments_label: '参数 (JSON)', call_tool: '调用工具', tools_heading: '工具列表' },
+    en: { title: 'MCP', description: 'All MCP tools use the same password as Console and API.', endpoint: 'Endpoint: ', tool_index: 'Tool index: ', tool_label: 'Tool', arguments_label: 'Arguments (JSON)', call_tool: 'Call Tool', tools_heading: 'Tools', account: 'Account', no_accounts: 'No accounts found. Add CDP ports and refresh.' },
+    zh: { title: 'MCP', description: '所有 MCP 工具使用与控制台和 API 相同的密码。', endpoint: '端点：', tool_index: '工具索引：', tool_label: '工具', arguments_label: '参数 (JSON)', call_tool: '调用工具', tools_heading: '工具列表', account: '账号', no_accounts: '未发现账号，请前往 CDP 页面添加端口并刷新。' },
   },
   settings: {
     en: { title: 'Settings', server: 'Server', host: 'Host', port: 'Port', agent_browser: 'Agent Browser', binary: 'Binary', cdp_port: 'CDP Port', timeout: 'Timeout (seconds)', not_detected: 'Not detected', cdp_port_placeholder: 'e.g. 9222', vnc: 'VNC', url: 'URL', username: 'Username', password: 'Password', save: 'Save Config', reset: 'Reset', change_password: 'Change Password', new_password: 'New Password', confirm_password: 'Confirm Password', password_mismatch: 'Passwords do not match', new_password_required: 'New password is required' },
