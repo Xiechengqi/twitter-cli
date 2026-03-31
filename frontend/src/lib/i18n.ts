@@ -2,8 +2,8 @@ type Lang = 'en' | 'zh';
 
 const dict = {
   nav: {
-    en: { console: 'Console', commands: 'Commands', mcp: 'MCP', cdp: 'CDP', skills: 'Skills', docs: 'Docs', settings: 'Settings', history: 'History', logout: 'Logout', login: 'Login', setup_password: 'Setup Password' },
-    zh: { console: '控制台', commands: '命令', mcp: 'MCP', cdp: 'CDP', skills: '技能', docs: '文档', settings: '设置', history: '历史', logout: '登出', login: '登录', setup_password: '设置密码' },
+    en: { console: 'Console', commands: 'Commands', mcp: 'MCP', cdp: 'CDP', skills: 'Skills', docs: 'Docs', settings: 'Settings', history: 'History', preview: 'Preview', logout: 'Logout', login: 'Login', setup_password: 'Setup Password' },
+    zh: { console: '控制台', commands: '命令', mcp: 'MCP', cdp: 'CDP', skills: '技能', docs: '文档', settings: '设置', history: '历史', preview: '预览', logout: '登出', login: '登录', setup_password: '设置密码' },
   },
   theme: {
     en: { light: 'Light', dark: 'Dark', auto: 'Auto' },
@@ -91,6 +91,32 @@ const dict = {
     en: { title: 'Execution History', description: 'Full log of all command executions across CLI, API, and MCP.' },
     zh: { title: '执行历史', description: '所有通过 CLI、API 和 MCP 执行的命令完整记录。' },
   },
+  preview: {
+    en: {
+      title: 'Preview Queue',
+      description: 'Tweets staged by prepost — review, edit, and publish.',
+      empty: 'No staged tweets. Use prepost to queue a tweet.',
+      send: 'Post to Twitter',
+      sending: 'Posting…',
+      delete: 'Delete',
+      edit_placeholder: 'Edit tweet text…',
+      account: 'Account',
+      image_label: 'Image',
+      posted: 'Posted!',
+    },
+    zh: {
+      title: '预览队列',
+      description: '通过 prepost 暂存的推文 — 审核、编辑后一键发布。',
+      empty: '暂无预发帖子，使用 prepost 命令将推文加入队列。',
+      send: '发送到 Twitter',
+      sending: '发布中…',
+      delete: '删除',
+      edit_placeholder: '编辑推文内容…',
+      account: '账号',
+      image_label: '图片',
+      posted: '已发布！',
+    },
+  },
   cdp: {
     en: {
       title: 'CDP Ports',
@@ -172,6 +198,7 @@ export function t(lang: Lang) {
     history: dict.history[lang],
     cdp: dict.cdp[lang],
     upload: dict.upload[lang],
+    preview: dict.preview[lang],
   };
 }
 

@@ -376,6 +376,28 @@ pub fn command_specs() -> Vec<CommandSpec> {
             ],
         },
         CommandSpec {
+            name: "prepost",
+            category: "write",
+            wave: 3,
+            execution_mode: "api-first",
+            summary: "Queue a tweet for preview — appears in the Preview page for review before posting",
+            requires_auth: true,
+            params: vec![
+                ParamSpec {
+                    name: "text",
+                    kind: "string",
+                    required: true,
+                    description: "Tweet text",
+                },
+                ParamSpec {
+                    name: "image",
+                    kind: "string",
+                    required: false,
+                    description: "Absolute path to image file (png/jpg/gif/webp)",
+                },
+            ],
+        },
+        CommandSpec {
             name: "reply",
             category: "write",
             wave: 3,
@@ -718,6 +740,12 @@ pub fn tool_specs() -> Vec<ToolSpec> {
         ToolSpec {
             name: "twitter_post",
             command: "post",
+            read_only: false,
+            requires_auth: true,
+        },
+        ToolSpec {
+            name: "twitter_prepost",
+            command: "prepost",
             read_only: false,
             requires_auth: true,
         },

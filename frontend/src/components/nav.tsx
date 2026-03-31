@@ -42,6 +42,7 @@ export function Nav({ authenticated }: { authenticated: boolean }) {
           {authenticated ? (
             <>
               {navLink('/commands', tr.nav.commands)}
+              {navLink('/preview', tr.nav.preview)}
               {navLink('/mcp', tr.nav.mcp)}
               {navLink('/cdp', tr.nav.cdp)}
               {navLink('/skills', tr.nav.skills)}

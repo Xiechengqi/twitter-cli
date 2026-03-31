@@ -86,6 +86,14 @@ export interface BootstrapInfo {
   vnc: { configured: boolean };
 }
 
+export interface PreviewPost {
+  id: string;
+  cdp_port: string;
+  content: string;
+  image: string | null;
+  created_at: number;
+}
+
 export interface ApiResponse<T> {
   ok: boolean;
   data: T;

@@ -5,6 +5,7 @@ import type {
   BootstrapInfo,
   CommandSpec,
   ExecutionRecord,
+  PreviewPost,
   SkillSpec,
   ToolSpec,
 } from './types';
@@ -144,4 +145,32 @@ export async function uploadFile(
   const form = new FormData();
   form.append('file', file);
   return request('/api/upload', { method: 'POST', body: form });
+}
+
+export async function getPreviewPosts(): Promise<ApiResponse<PreviewPost[]>> {
+  return request('/api/preview');
+}
+
+export async function updatePreviewPost(
+  id: string,
+  content: string,
+  image: string | null,
+): Promise<ApiResponse<{ updated: boolean }>> {
+  return request(`/api/preview/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ content, image }),
+  });
+}
+
+export async function deletePreviewPost(
+  id: string,
+): Promise<ApiResponse<{ deleted: boolean }>> {
+  return request(`/api/preview/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function sendPreviewPost(
+  id: string,
+): Promise<ApiResponse<unknown>> {
+  return request(`/api/preview/${encodeURIComponent(id)}/send`, { method: 'POST' });
 }

@@ -36,6 +36,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/accounts", get(get_accounts))
         .route("/api/accounts/{cdp_port}/persona", put(update_persona))
         .route("/api/upload", post(upload_file))
+        .route("/api/preview", get(list_preview_posts))
+        .route("/api/preview/{id}", put(update_preview_post).delete(delete_preview_post))
+        .route("/api/preview/{id}/send", post(send_preview_post))
         .fallback(crate::embedded::serve_static)
         .with_state(state)
 }
@@ -507,6 +510,38 @@ async fn execute_and_record(
     params: Value,
     source: &str,
 ) -> Result<Value, AppError> {
+    // prepost is handled in-process: save to preview_posts table, no browser needed
+    if command == "prepost" {
+        let cdp_port = params
+            .get("cdp_port")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| AppError::InvalidParams("cdp_port is required".to_string()))?;
+        let text = params
+            .get("text")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| AppError::InvalidParams("text is required".to_string()))?;
+        let image = params.get("image").and_then(Value::as_str).filter(|s| !s.is_empty());
+
+        let id = format!("{:x}", std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos());
+
+        state.db.insert_preview_post(&id, cdp_port, text, image)?;
+
+        let result = serde_json::json!({ "queued": true, "id": id });
+        let preview_summary = {
+            let mut end = 80.min(text.len());
+            while end > 0 && !text.is_char_boundary(end) { end -= 1; }
+            if end < text.len() { format!("queued preview: {}…", &text[..end]) }
+            else { format!("queued preview: {}", text) }
+        };
+        push_history(state, ExecutionRecord::new(source, command, true, preview_summary)).await;
+        return Ok(result);
+    }
+
     let config = {
         let runtime = state.runtime.read().await;
         runtime.config.clone()
@@ -871,6 +906,68 @@ async fn upload_file(
     }
 
     Err(AppError::InvalidParams("no file in request".to_string()))
+}
+
+// ── Preview Posts ─────────────────────────────────────────────────────────────
+
+async fn list_preview_posts(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+    let posts = state.db.list_preview_posts()?;
+    let value = serde_json::to_value(posts).unwrap_or(json!([]));
+    Ok(Json(ApiResponse::success(value, None)))
+}
+
+#[derive(Deserialize)]
+struct UpdatePreviewPostRequest {
+    content: String,
+    image: Option<String>,
+}
+
+async fn update_preview_post(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<UpdatePreviewPostRequest>,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+    state.db.update_preview_post(&id, &payload.content, payload.image.as_deref())?;
+    Ok(Json(ApiResponse::success(json!({ "updated": true }), None)))
+}
+
+async fn delete_preview_post(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+    state.db.delete_preview_post(&id)?;
+    Ok(Json(ApiResponse::success(json!({ "deleted": true }), None)))
+}
+
+async fn send_preview_post(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+
+    let post = state
+        .db
+        .get_preview_post(&id)?
+        .ok_or_else(|| AppError::InvalidParams(format!("preview post {id} not found")))?;
+
+    let mut params = json!({ "cdp_port": post.cdp_port, "text": post.content });
+    if let Some(img) = &post.image {
+        params["image"] = json!(img);
+    }
+
+    let result = execute_and_record(&state, "post", params, "preview").await?;
+    state.db.delete_preview_post(&id)?;
+
+    Ok(Json(ApiResponse::success(result, Some("post".to_string()))))
 }
 
 #[cfg(test)]

@@ -10,6 +10,15 @@ use crate::errors::{AppError, AppResult};
 const DB_FILE_NAME: &str = "data.db";
 
 #[derive(Debug, Clone, Serialize)]
+pub struct PreviewPost {
+    pub id: String,
+    pub cdp_port: String,
+    pub content: String,
+    pub image: Option<String>,
+    pub created_at: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct AccountEntry {
     pub cdp_port: String,
     pub username: String,
@@ -46,6 +55,13 @@ impl Db {
                 username    TEXT PRIMARY KEY,
                 persona     TEXT NOT NULL DEFAULT '',
                 updated_at  INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS preview_posts (
+                id          TEXT PRIMARY KEY,
+                cdp_port    TEXT NOT NULL,
+                content     TEXT NOT NULL,
+                image       TEXT,
+                created_at  INTEGER NOT NULL
             );",
         )
         .map_err(|e| AppError::Internal(format!("init db: {e}")))?;
@@ -188,6 +204,97 @@ impl Db {
         conn.execute(
             "INSERT OR IGNORE INTO accounts (cdp_port) VALUES (?1)",
             [cdp_port],
+        )
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(())
+    }
+
+    pub fn insert_preview_post(
+        &self,
+        id: &str,
+        cdp_port: &str,
+        content: &str,
+        image: Option<&str>,
+    ) -> AppResult<()> {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
+        conn.execute(
+            "INSERT INTO preview_posts (id, cdp_port, content, image, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![id, cdp_port, content, image, now],
+        )
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(())
+    }
+
+    pub fn list_preview_posts(&self) -> AppResult<Vec<PreviewPost>> {
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
+        let mut stmt = conn
+            .prepare("SELECT id, cdp_port, content, image, created_at FROM preview_posts ORDER BY created_at DESC")
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(PreviewPost {
+                    id: row.get(0)?,
+                    cdp_port: row.get(1)?,
+                    content: row.get(2)?,
+                    image: row.get(3)?,
+                    created_at: row.get(4)?,
+                })
+            })
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| AppError::Internal(e.to_string()))?);
+        }
+        Ok(result)
+    }
+
+    pub fn get_preview_post(&self, id: &str) -> AppResult<Option<PreviewPost>> {
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
+        let mut stmt = conn
+            .prepare("SELECT id, cdp_port, content, image, created_at FROM preview_posts WHERE id = ?1")
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        let mut rows = stmt
+            .query_map([id], |row| {
+                Ok(PreviewPost {
+                    id: row.get(0)?,
+                    cdp_port: row.get(1)?,
+                    content: row.get(2)?,
+                    image: row.get(3)?,
+                    created_at: row.get(4)?,
+                })
+            })
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        match rows.next() {
+            Some(row) => Ok(Some(row.map_err(|e| AppError::Internal(e.to_string()))?)),
+            None => Ok(None),
+        }
+    }
+
+    pub fn update_preview_post(
+        &self,
+        id: &str,
+        content: &str,
+        image: Option<&str>,
+    ) -> AppResult<()> {
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
+        conn.execute(
+            "UPDATE preview_posts SET content = ?1, image = ?2 WHERE id = ?3",
+            rusqlite::params![content, image, id],
+        )
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(())
+    }
+
+    pub fn delete_preview_post(&self, id: &str) -> AppResult<()> {
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
+        conn.execute(
+            "DELETE FROM preview_posts WHERE id = ?1",
+            [id],
         )
         .map_err(|e| AppError::Internal(e.to_string()))?;
         Ok(())
