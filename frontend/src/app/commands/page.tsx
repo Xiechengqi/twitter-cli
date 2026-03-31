@@ -47,7 +47,13 @@ export default function CommandsPage() {
           setSelected(initial);
         }
         setAccounts(accRes.data);
-        if (accRes.data.length > 0) setCdpPort(accRes.data[0].cdp_port);
+        if (accRes.data.length > 0) {
+          const cached = localStorage.getItem('twitter-cli:last-cdp-port');
+          const initial = cached && accRes.data.some((a) => a.cdp_port === cached)
+            ? cached
+            : accRes.data[0].cdp_port;
+          setCdpPort(initial);
+        }
       } catch { /* 401 */ }
       finally { setLoading(false); }
     })();
@@ -130,7 +136,7 @@ export default function CommandsPage() {
                 ) : (
                   <select
                     value={cdpPort}
-                    onChange={(e) => setCdpPort(e.target.value)}
+                    onChange={(e) => { setCdpPort(e.target.value); localStorage.setItem('twitter-cli:last-cdp-port', e.target.value); }}
                     className="mt-1"
                   >
                     {accounts.map((a) => (
