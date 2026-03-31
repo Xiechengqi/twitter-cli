@@ -52,6 +52,7 @@ export interface AccountEntry {
   avatar_url: string;
   online: boolean;
   last_checked: number;
+  persona: string;
 }
 
 export interface VncConfig {

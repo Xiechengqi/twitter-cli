@@ -34,6 +34,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/cdp-ports", get(get_cdp_ports).put(update_cdp_ports))
         .route("/api/cdp-ports/refresh", post(refresh_cdp_ports))
         .route("/api/accounts", get(get_accounts))
+        .route("/api/accounts/{cdp_port}/persona", put(update_persona))
         .fallback(crate::embedded::serve_static)
         .with_state(state)
 }
@@ -764,6 +765,38 @@ async fn get_accounts(
     let accounts = state.db.list_accounts()?;
     Ok(Json(ApiResponse::success(
         serde_json::to_value(&accounts).map_err(|e| AppError::Internal(e.to_string()))?,
+        None,
+    )))
+}
+
+#[derive(Deserialize)]
+struct UpdatePersonaRequest {
+    persona: String,
+}
+
+async fn update_persona(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(cdp_port): Path<String>,
+    Json(payload): Json<UpdatePersonaRequest>,
+) -> Result<Json<ApiResponse<Value>>, AppError> {
+    require_auth(&headers, &state).await?;
+
+    let account = state
+        .db
+        .get_account(&cdp_port)?
+        .ok_or_else(|| AppError::InvalidParams(format!("cdp_port {cdp_port} not found")))?;
+
+    if account.username.is_empty() {
+        return Err(AppError::InvalidParams(format!(
+            "cdp_port {cdp_port} has no associated username yet — wait for discovery to complete"
+        )));
+    }
+
+    state.db.upsert_persona(&account.username, &payload.persona)?;
+
+    Ok(Json(ApiResponse::success(
+        json!({ "saved": true, "username": account.username }),
         None,
     )))
 }

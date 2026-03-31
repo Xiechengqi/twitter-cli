@@ -126,3 +126,14 @@ export async function refreshCdpPorts(): Promise<ApiResponse<{ refreshing: boole
 export async function getAccounts(): Promise<ApiResponse<AccountEntry[]>> {
   return request('/api/accounts');
 }
+
+export async function updatePersona(
+  cdpPort: string,
+  persona: string,
+): Promise<ApiResponse<{ saved: boolean; username: string }>> {
+  return request(`/api/accounts/${encodeURIComponent(cdpPort)}/persona`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ persona }),
+  });
+}

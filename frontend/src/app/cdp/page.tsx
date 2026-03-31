@@ -11,6 +11,93 @@ import { t } from '@/lib/i18n';
 import * as api from '@/lib/api';
 import type { AccountEntry } from '@/lib/types';
 
+const PERSONA_MAX = 500;
+
+function PersonaCard({
+  account,
+  tr,
+}: {
+  account: AccountEntry;
+  tr: ReturnType<typeof t>['cdp'];
+}) {
+  const [text, setText] = useState(account.persona);
+  const [savedText, setSavedText] = useState(account.persona);
+  const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+
+  const isDirty = text !== savedText;
+
+  const handleSave = async () => {
+    setSaving(true);
+    setJustSaved(false);
+    try {
+      await api.updatePersona(account.cdp_port, text);
+      setSavedText(text);
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 3000);
+    } catch (e) {
+      console.error('save persona failed:', e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={`rounded-xl border border-slate-100 p-5 transition-opacity ${account.online ? '' : 'opacity-60'}`}>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        {account.avatar_url ? (
+          <img src={account.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover flex-shrink-0" />
+        ) : (
+          <div className="h-9 w-9 rounded-full bg-brand-100 flex-shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-slate-900 text-sm leading-tight truncate">
+            {account.username ? `@${account.username}` : <span className="text-slate-400">{tr.persona_no_username}</span>}
+            {account.display_name && (
+              <span className="font-normal text-slate-500 ml-1.5">{account.display_name}</span>
+            )}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+            <StatusDot ok={account.online} />
+            {account.online ? tr.online : tr.offline}
+            <span className="text-slate-300">·</span>
+            <span className="font-mono">{tr.col_port.toLowerCase()} {account.cdp_port}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Textarea */}
+      <textarea
+        rows={4}
+        maxLength={PERSONA_MAX}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={tr.persona_placeholder}
+        className="w-full resize-y text-sm"
+      />
+
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-xs text-slate-400">{text.length} / {PERSONA_MAX}</span>
+        <button
+          onClick={handleSave}
+          disabled={saving || !isDirty}
+          className={`text-sm px-4 py-1.5 rounded-lg font-semibold transition-all duration-200 ${
+            justSaved
+              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+              : isDirty
+              ? 'btn-primary'
+              : 'bg-slate-50 text-slate-400 border border-slate-200 cursor-default'
+          }`}
+        >
+          {saving ? tr.persona_saving : justSaved ? tr.persona_saved : tr.persona_save}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function relativeTime(ts: number, never: string): string {
   if (ts === 0) return never;
   const diff = Math.floor((Date.now() / 1000) - ts);
@@ -236,6 +323,21 @@ export default function CdpPage() {
             </div>
           )}
         </Card>
+
+        {/* Account Personas */}
+        {accounts.some((a) => a.username) && (
+          <Card hover={false}>
+            <h2 className="text-lg font-bold text-slate-900 mb-1">{tr.persona_heading}</h2>
+            <p className="text-sm text-slate-500 mb-6">{tr.persona_description}</p>
+            <div className="space-y-4">
+              {accounts
+                .filter((a) => ports.includes(a.cdp_port))
+                .map((account) => (
+                  <PersonaCard key={account.cdp_port} account={account} tr={tr} />
+                ))}
+            </div>
+          </Card>
+        )}
 
         {/* Discovered Accounts (ports not yet in managed list but discovered) */}
         {accounts.filter((a) => !ports.includes(a.cdp_port)).length > 0 && (

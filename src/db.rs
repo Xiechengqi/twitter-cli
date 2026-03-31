@@ -17,6 +17,9 @@ pub struct AccountEntry {
     pub avatar_url: String,
     pub online: bool,
     pub last_checked: u64,
+    /// Persona description keyed by username in the personas table.
+    /// Empty string means no persona is set.
+    pub persona: String,
 }
 
 #[derive(Clone)]
@@ -38,6 +41,11 @@ impl Db {
                 avatar_url   TEXT NOT NULL DEFAULT '',
                 online       INTEGER NOT NULL DEFAULT 0,
                 last_checked INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS personas (
+                username    TEXT PRIMARY KEY,
+                persona     TEXT NOT NULL DEFAULT '',
+                updated_at  INTEGER NOT NULL DEFAULT 0
             );",
         )
         .map_err(|e| AppError::Internal(format!("init db: {e}")))?;
@@ -65,7 +73,13 @@ impl Db {
     pub fn list_accounts(&self) -> AppResult<Vec<AccountEntry>> {
         let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
         let mut stmt = conn
-            .prepare("SELECT cdp_port, username, display_name, avatar_url, online, last_checked FROM accounts ORDER BY cdp_port")
+            .prepare(
+                "SELECT a.cdp_port, a.username, a.display_name, a.avatar_url, a.online, a.last_checked,
+                        COALESCE(p.persona, '') AS persona
+                 FROM accounts a
+                 LEFT JOIN personas p ON p.username = a.username AND a.username != ''
+                 ORDER BY a.cdp_port",
+            )
             .map_err(|e| AppError::Internal(e.to_string()))?;
         let rows = stmt
             .query_map([], |row| {
@@ -76,6 +90,7 @@ impl Db {
                     avatar_url: row.get(3)?,
                     online: row.get::<_, i32>(4)? != 0,
                     last_checked: row.get(5)?,
+                    persona: row.get(6)?,
                 })
             })
             .map_err(|e| AppError::Internal(e.to_string()))?;
@@ -89,7 +104,13 @@ impl Db {
     pub fn get_account(&self, cdp_port: &str) -> AppResult<Option<AccountEntry>> {
         let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
         let mut stmt = conn
-            .prepare("SELECT cdp_port, username, display_name, avatar_url, online, last_checked FROM accounts WHERE cdp_port = ?1")
+            .prepare(
+                "SELECT a.cdp_port, a.username, a.display_name, a.avatar_url, a.online, a.last_checked,
+                        COALESCE(p.persona, '') AS persona
+                 FROM accounts a
+                 LEFT JOIN personas p ON p.username = a.username AND a.username != ''
+                 WHERE a.cdp_port = ?1",
+            )
             .map_err(|e| AppError::Internal(e.to_string()))?;
         let mut rows = stmt
             .query_map([cdp_port], |row| {
@@ -100,6 +121,7 @@ impl Db {
                     avatar_url: row.get(3)?,
                     online: row.get::<_, i32>(4)? != 0,
                     last_checked: row.get(5)?,
+                    persona: row.get(6)?,
                 })
             })
             .map_err(|e| AppError::Internal(e.to_string()))?;
@@ -107,6 +129,23 @@ impl Db {
             Some(row) => Ok(Some(row.map_err(|e| AppError::Internal(e.to_string()))?)),
             None => Ok(None),
         }
+    }
+
+    /// Save or update the persona for a given username.
+    pub fn upsert_persona(&self, username: &str, persona: &str) -> AppResult<()> {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let conn = self.conn.lock().map_err(|_| AppError::Internal("db lock poisoned".to_string()))?;
+        conn.execute(
+            "INSERT INTO personas (username, persona, updated_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(username) DO UPDATE SET persona = excluded.persona, updated_at = excluded.updated_at",
+            rusqlite::params![username, persona, now],
+        )
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(())
     }
 
     pub fn upsert_account(&self, entry: &AccountEntry) -> AppResult<()> {
