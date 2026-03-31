@@ -18,7 +18,7 @@ pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/logout", post(logout))
         .route("/health", get(health))
-        .route("/mcp", post(call_mcp))
+        .route("/mcp", get(crate::embedded::serve_static).post(call_mcp))
         .route("/api/bootstrap", get(bootstrap))
         .route("/api/setup/password", post(setup_password))
         .route("/api/login", post(login))
