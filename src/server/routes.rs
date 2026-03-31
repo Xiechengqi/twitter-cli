@@ -353,7 +353,10 @@ async fn call_mcp(
             let mut tools: Vec<Value> = vec![accounts_tool];
             tools.extend(state.manifest.mcp_tools.iter().map(|tool| json!({
                 "name": tool.name,
-                "description": format!("Maps to twitter-cli command `{}`", tool.command),
+                "description": format!(
+                    "Maps to twitter-cli command `{}`. Requires cdp_port — call twitter_accounts first to get available accounts and their ports.",
+                    tool.command
+                ),
                 "inputSchema": build_mcp_input_schema(&state, tool.command),
                 "annotations": {
                     "readOnlyHint": tool.read_only
@@ -594,17 +597,25 @@ fn summarize_success(result: &Value) -> String {
 }
 
 fn build_mcp_input_schema(state: &AppState, command_name: &str) -> Value {
+    // cdp_port is always required — the agent must call twitter_accounts first to obtain it
+    let mut properties = serde_json::Map::new();
+    properties.insert(
+        "cdp_port".to_string(),
+        json!({
+            "type": "string",
+            "description": "CDP port of the target Twitter account. Call twitter_accounts first to get the available ports.",
+        }),
+    );
+    let mut required: Vec<&str> = vec!["cdp_port"];
+
     let Some(command) = state
         .manifest
         .commands
         .iter()
         .find(|command| command.name == command_name)
     else {
-        return json!({ "type": "object", "properties": {} });
+        return json!({ "type": "object", "properties": properties, "required": required });
     };
-
-    let mut properties = serde_json::Map::new();
-    let mut required = Vec::new();
 
     for param in &command.params {
         properties.insert(
