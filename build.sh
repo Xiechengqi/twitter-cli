@@ -10,3 +10,5 @@ if [ $# -eq 0 ]; then
 else
   cargo zigbuild --release --target "$1"
 fi
+
+cp -f -v target/release/twitter-cli ./
